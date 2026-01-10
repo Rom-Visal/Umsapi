@@ -12,7 +12,7 @@ import java.util.List;
 @Mapper(config = GlobalMapperConfiguration.class)
 public interface UserMapper {
 
-    @Mapping(target = "enabled", constant = "true")
+//    @Mapping(target = "enabled", constant = "true")
     User toEntity(RegistrationRequest request);
 
     UserResponse toResponse(User response);

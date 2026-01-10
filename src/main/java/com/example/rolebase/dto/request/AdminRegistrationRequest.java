@@ -13,7 +13,7 @@ import java.util.Set;
 @Builder
 public class AdminRegistrationRequest {
 
-    @Schema(description = "Username", example = "New User")
+    @Schema(description = "Username", example = "NewUser")
     @NotBlank(message = "Username cannot be blank")
     @Size(min = 2, max = 50, message = "Username must be between 2-50 characters")
     private String username;

@@ -20,7 +20,7 @@ public class UserResponse {
     @Schema(description = "Email", example = "User@gmail.com")
     private String email;
 
-    @Schema(description = "Roles", example = "[\"USER\", \"MANAGER\"]")
+    @Schema(description = "Roles", example = "[\"USER\"]")
     private Set<String> roles;
 
     @Schema(description = "Status", example = "true")
