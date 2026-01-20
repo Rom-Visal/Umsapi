@@ -8,6 +8,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @NoArgsConstructor
@@ -37,17 +38,17 @@ public class UserRole {
     public void onCreate() {
         this.assignAt = LocalDateTime.now();
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
         if (authentication != null && authentication.isAuthenticated()) {
             String currentPrincipalName = authentication.getName();
 
-            if ("anonymousUser".equalsIgnoreCase(currentPrincipalName)) {
-                this.assignBy = "SELF_REGISTERED";
-            } else {
-                this.assignBy = currentPrincipalName;
-            }
+            this.assignBy = Objects.equals("anonymousUser".toLowerCase(),
+                    currentPrincipalName.toLowerCase())
+                    ? "SELF_REGISTERED"
+                    : currentPrincipalName;
 
         } else {
-            this.assignBy = "SYSTEM";
+            this.assignBy = Objects.requireNonNullElse(this.assignBy, "SYSTEM");
         }
     }
 }

@@ -22,7 +22,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -61,19 +64,29 @@ public class UserService {
 
         User user = adminMapper.toEntity(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
+        Set<Role> rolesToAssign = new HashSet<>();
 
         if (request.getRoles() != null && !request.getRoles().isEmpty()) {
-            request.getRoles().forEach(roleName -> {
-                Role role = roleRepository.findByName(roleName)
-                        .orElseThrow(() ->
-                                new IllegalArgumentException("Role not found: " + roleName));
-                user.addRole(role);
-            });
+            List<Role> foundRoles = roleRepository.findAllByNameIn(request.getRoles());
+
+            Set<String> foundRoleNames = foundRoles.stream()
+                    .map(Role::getName)
+                    .collect(Collectors.toSet());
+            List<String> invalidRoles = request.getRoles().stream()
+                    .filter(name -> !foundRoleNames.contains(name))
+                    .toList();
+
+            if (!invalidRoles.isEmpty()) {
+                throw new IllegalArgumentException("The following roles do not exist: " + invalidRoles);
+            }
+            rolesToAssign.addAll(foundRoles);
         } else {
             Role defaultRole = roleRepository.findByName("USER")
-                    .orElseThrow(() -> new IllegalStateException("USER role not found"));
-            user.addRole(defaultRole);
+                    .orElseThrow(() -> new IllegalStateException("Default USER role not found"));
+            rolesToAssign.add(defaultRole);
         }
+
+        rolesToAssign.forEach(user::addRole);
         return userRepository.save(user);
     }
 

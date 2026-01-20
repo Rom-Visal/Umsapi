@@ -10,7 +10,6 @@ import org.mapstruct.Mapping;
 public interface AdminRegistrationMapper {
 
     @Mapping(target = "roles", ignore = true)
-//    @Mapping(target = "enabled", constant = "true")
     User toEntity(AdminRegistrationRequest request);
 
 }
