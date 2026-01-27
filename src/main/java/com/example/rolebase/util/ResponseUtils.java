@@ -5,7 +5,7 @@ import org.springframework.web.context.request.WebRequest;
 
 import java.time.LocalDateTime;
 
-public final class ResponseUtil {
+public final class ResponseUtils {
 
     public static ErrorResponse createErrorResponse(
             LocalDateTime timestamp,

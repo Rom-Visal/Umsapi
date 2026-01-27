@@ -1,7 +1,7 @@
 package com.example.rolebase.exception;
 
 import com.example.rolebase.dto.response.ErrorResponse;
-import com.example.rolebase.util.ResponseUtil;
+import com.example.rolebase.util.ResponseUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
@@ -97,7 +97,7 @@ public class GlobalExceptionHandler {
             log.warn("{}: {}", errorTitle, ex.getMessage());
         }
 
-        ErrorResponse error = ResponseUtil.createErrorResponse(
+        ErrorResponse error = ResponseUtils.createErrorResponse(
                 LocalDateTime.now(),
                 errorTitle,
                 ex.getMessage(),

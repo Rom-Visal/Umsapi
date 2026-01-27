@@ -41,11 +41,7 @@ public class UserService {
     private final AdminRegistrationMapper adminMapper;
     private final UpdateUserRequestMapper updateMapper;
 
-    public UserResponse toUserResponse(User user) {
-        return userMapper.toResponse(user);
-    }
-
-    public User registerUser(RegistrationRequest request) {
+    public UserResponse registerUser(RegistrationRequest request) {
         validateUsernameAndEmail(request.getUsername(), request.getEmail());
         log.info("Proceeding with registration for username: {}", request.getUsername());
 
@@ -56,10 +52,11 @@ public class UserService {
                 .orElseThrow(() -> new IllegalStateException("Default USER role not found in the system."));
 
         user.addRole(defaultRole);
-        return userRepository.save(user);
+        userRepository.save(user);
+        return userMapper.toResponse(user);
     }
 
-    public User registerUserByAdmin(AdminRegistrationRequest request) {
+    public UserResponse registerUserByAdmin(AdminRegistrationRequest request) {
         validateUsernameAndEmail(request.getUsername(), request.getEmail());
 
         User user = adminMapper.toEntity(request);
@@ -87,7 +84,8 @@ public class UserService {
         }
 
         rolesToAssign.forEach(user::addRole);
-        return userRepository.save(user);
+        userRepository.save(user);
+        return userMapper.toResponse(user);
     }
 
     public UpdateUserResponse updateUser(String currentUsername, UpdateUserRequest updatedDetails) {

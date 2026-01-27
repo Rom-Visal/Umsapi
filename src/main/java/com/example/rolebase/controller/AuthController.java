@@ -3,7 +3,6 @@ package com.example.rolebase.controller;
 import com.example.rolebase.api.AuthApi;
 import com.example.rolebase.dto.request.RegistrationRequest;
 import com.example.rolebase.dto.response.UserResponse;
-import com.example.rolebase.entity.User;
 import com.example.rolebase.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,7 +28,7 @@ public class AuthController implements AuthApi {
     @Override
     @PostMapping("/register")
     public ResponseEntity<UserResponse> registerUser(RegistrationRequest request) {
-        User newUser = userService.registerUser(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(userService.toUserResponse(newUser));
+        UserResponse response = userService.registerUser(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

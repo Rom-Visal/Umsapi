@@ -42,7 +42,7 @@ Before running this application, make sure you have
    ```
 2. **Configure Database:**
    ```
-   spring.datasource.url=jdbc:postgresql://localhost:3306/your_database
+    spring.datasource.url=jdbc:postgresql://localhost:3306/your_database
     spring.datasource.username=your_username
     spring.datasource.password=your_password
     spring.jpa.hibernate.ddl-auto=update
@@ -55,8 +55,4 @@ Once the application is running, you can access the interactive API documentatio
 `http://localhost:8080/swagger-ui.html`
 #### API Documentation Preview
 
-Admin Endpoints
-<img width="2784" height="807" alt="image" src="https://github.com/user-attachments/assets/e58314a2-3bd8-47d9-8a09-b617fb7ef71a" />
-
-Other Endpoints
-<img width="2802" height="1180" alt="image" src="https://github.com/user-attachments/assets/97fa68a2-7079-4500-aa6d-6597c440526c" />
+![img.png](API-Docs.png)

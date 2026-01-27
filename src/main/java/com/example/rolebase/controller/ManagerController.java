@@ -6,7 +6,6 @@ import com.example.rolebase.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,12 +32,5 @@ public class ManagerController implements ManagerApi {
     @GetMapping("/user/{id}")
     public ResponseEntity<UserResponse> getUser(@PathVariable Integer id) {
         return ResponseEntity.ok(userService.getUser(id));
-    }
-
-    @Override
-    @GetMapping("/profile")
-    public ResponseEntity<UserResponse> getProfile(Authentication authentication) {
-        UserResponse userProfile = userService.getProfile(authentication.getName());
-        return ResponseEntity.ok(userProfile);
     }
 }

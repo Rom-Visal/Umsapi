@@ -7,11 +7,9 @@ import com.example.rolebase.config.openapi.SecuredGetById;
 import com.example.rolebase.dto.response.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
@@ -29,9 +27,4 @@ public interface ManagerApi {
     @ApiUserResponse
     @SecuredGetById
     ResponseEntity<UserResponse> getUser(@Parameter(description = "User ID", example = "1") @PathVariable Integer id);
-
-    @Operation(summary = "Get Profile", description = "Get manager's own profile")
-    @ApiResponse(responseCode = "401", ref = "#/components/responses/Unauthorized")
-    @ApiUserResponse
-    ResponseEntity<UserResponse> getProfile(@Parameter(hidden = true) Authentication authentication);
 }
