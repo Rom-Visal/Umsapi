@@ -37,16 +37,13 @@ public class UserRole {
     @PrePersist
     public void onCreate() {
         this.assignAt = LocalDateTime.now();
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication != null && authentication.isAuthenticated()) {
-            String currentPrincipalName = authentication.getName();
-
-            this.assignBy = Objects.equals("anonymousUser".toLowerCase(),
-                    currentPrincipalName.toLowerCase())
+        if (auth != null && auth.isAuthenticated()) {
+            String name = auth.getName();
+            this.assignBy = "anonymousUser".equalsIgnoreCase(name)
                     ? "SELF_REGISTERED"
-                    : currentPrincipalName;
-
+                    : name;
         } else {
             this.assignBy = Objects.requireNonNullElse(this.assignBy, "SYSTEM");
         }

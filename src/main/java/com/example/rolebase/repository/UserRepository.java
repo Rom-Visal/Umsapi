@@ -1,25 +1,27 @@
 package com.example.rolebase.repository;
 
-import java.util.Optional;
-
+import com.example.rolebase.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Repository;
 
-import com.example.rolebase.entity.User;
+import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Integer> {
 
-    Optional<User> findByUsernameIgnoreCase(String username);
-
     @Query("SELECT u FROM User u " + "LEFT JOIN FETCH u.roles ur " +
             "LEFT JOIN FETCH ur.role " + "WHERE LOWER(u.username) = LOWER(:username)")
-    Optional<User> findByUsernameWithRolesIgnoreCase(@Param("username") String username);
+    Optional<User> findByUsernameWithRoles(@Param("username") String username);
 
-    Optional<User> findByEmail(String email);
+    boolean existsByUsernameIgnoreCase(String username);
 
-    boolean existsById(@NonNull Integer id);
+    boolean existsByEmail(String email);
+
+    @Modifying
+    @Query("UPDATE User u SET u.enabled = :enabled " +
+            "WHERE LOWER(u.username) = LOWER(:username)")
+    int updateUserEnabledStatus(@Param("username") String username, @Param("enabled") boolean enabled);
 }

@@ -16,6 +16,8 @@ import com.example.rolebase.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -89,7 +91,7 @@ public class UserService {
     }
 
     public UpdateUserResponse updateUser(String currentUsername, UpdateUserRequest updatedDetails) {
-        User existingUser = userRepository.findByUsernameWithRolesIgnoreCase(currentUsername)
+        User existingUser = userRepository.findByUsernameWithRoles(currentUsername)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         if (!existingUser.isEnabled()) {
@@ -112,17 +114,18 @@ public class UserService {
     }
 
     public void updateUserStatus(String username, boolean isEnabled) {
-        User user = userRepository.findByUsernameIgnoreCase(username)
-                .orElseThrow(() -> new UserNotFoundException("User nod found"));
+        int updatedRows = userRepository.updateUserEnabledStatus(username, isEnabled);
 
-        user.setEnabled(isEnabled);
-        userRepository.save(user);
-        log.info("User {} enabled status updated to {}, username, isEnabled", username, isEnabled);
+        if (updatedRows == 0) {
+            throw new UserNotFoundException("User not found");
+        }
+
+        log.info("User {} enabled status updated to {}", username, isEnabled);
     }
 
-    public List<UserResponse> getAll() {
-        List<User> user = userRepository.findAll();
-        return userMapper.toResponseList(user);
+    public Page<UserResponse> getAll(Pageable pageable) {
+        Page<User> userPage = userRepository.findAll(pageable);
+        return userPage.map(userMapper::toResponse);
     }
 
     public UserResponse getUser(Integer id) {
@@ -140,17 +143,17 @@ public class UserService {
     }
 
     public UserResponse getProfile(String username) {
-        User user = userRepository.findByUsernameWithRolesIgnoreCase(username)
+        User user = userRepository.findByUsernameWithRoles(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Authentication user not found in database: " + username));
         return userMapper.toResponse(user);
     }
 
     // Helper method
     private void validateUsernameAndEmail(String username, String email) {
-        if (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
+        if (userRepository.existsByUsernameIgnoreCase(username)) {
             throw new IllegalArgumentException("Username is already taken");
         }
-        if (userRepository.findByEmail(email).isPresent()) {
+        if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email is already registered");
         }
     }

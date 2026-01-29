@@ -1,7 +1,9 @@
 package com.example.rolebase.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -10,7 +12,7 @@ import java.util.Set;
 @Getter
 @Setter
 @NoArgsConstructor
-@Table(name = "roles")
+@Table(name = "roles", indexes = @Index(name = "idx_name", columnList = "name"))
 public class Role {
 
     @Id

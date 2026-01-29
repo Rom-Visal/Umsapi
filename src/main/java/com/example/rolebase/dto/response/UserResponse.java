@@ -1,14 +1,13 @@
 package com.example.rolebase.dto.response;
 
-import java.util.Set;
-
-import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
+import lombok.Builder;
+import lombok.Getter;
+
+import java.util.Set;
 
 @Getter
 @Builder
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class UserResponse {
 
     @Schema(description = "User ID", example = "1")
