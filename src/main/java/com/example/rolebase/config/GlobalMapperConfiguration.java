@@ -1,6 +1,6 @@
 package com.example.rolebase.config;
 
-import com.example.rolebase.util.RoleMapperUtils;
+import com.example.rolebase.mapper.support.RoleMapperUtils;
 import org.mapstruct.MapperConfig;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 import org.mapstruct.ReportingPolicy;

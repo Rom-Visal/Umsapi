@@ -1,12 +1,12 @@
 package com.example.rolebase.exception;
 
 import com.example.rolebase.dto.response.ErrorResponse;
-import com.example.rolebase.util.ResponseUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -63,6 +63,12 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.CONFLICT, "Invalid State", ex, request);
     }
 
+    @ExceptionHandler
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
+            HttpMessageNotReadableException ex, WebRequest request) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Bad Request", ex, request);
+    }
+
     @ExceptionHandler(DisabledException.class)
     public ResponseEntity<ErrorResponse> handleDisabledException(
             DisabledException ex, WebRequest request) {
@@ -72,6 +78,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(
             MethodArgumentNotValidException ex, WebRequest request) {
+        // Extracts field errors into comma-separated string
         String errors = ex.getBindingResult().getFieldErrors().stream()
                 .map(f -> f.getField() + ": " + f.getDefaultMessage())
                 .collect(Collectors.joining(", "));
@@ -84,7 +91,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex, WebRequest request) {
         log.error("Unexpected error occurred", ex);
         String message = isDevelopmentMode()
-                ? "An unexpected error occurred: " + ex.getMessage()
+                ? "An unexpected error occurred: " + ex.toString()
                 : "An unexpected error occurred. Please try again later";
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal Server Error", new Exception(message), request);
@@ -97,15 +104,18 @@ public class GlobalExceptionHandler {
             log.warn("{}: {}", errorTitle, ex.getMessage());
         }
 
-        ErrorResponse error = ResponseUtils.createErrorResponse(
-                LocalDateTime.now(),
-                errorTitle,
-                ex.getMessage(),
-                request);
+        // Builds error response with timestamp, message, and path
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .error(errorTitle)
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
 
         return ResponseEntity.status(status).body(error);
     }
 
+    //Checks if the application runs in development mode
     private boolean isDevelopmentMode() {
         return Arrays.asList(environment.getActiveProfiles()).contains("dev")
                 || Arrays.asList(environment.getActiveProfiles()).contains("development");

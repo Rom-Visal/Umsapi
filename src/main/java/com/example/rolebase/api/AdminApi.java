@@ -1,8 +1,8 @@
 package com.example.rolebase.api;
 
-import com.example.rolebase.config.openapi.ApiUserResponse;
-import com.example.rolebase.config.openapi.SecuredEndpoint;
-import com.example.rolebase.config.openapi.SecuredGetById;
+import com.example.rolebase.api.common.ApiUserResponse;
+import com.example.rolebase.api.common.SecuredEndpoint;
+import com.example.rolebase.api.common.SecuredGetById;
 import com.example.rolebase.dto.request.AdminRegistrationRequest;
 import com.example.rolebase.dto.response.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,5 +37,5 @@ public interface AdminApi {
     @ApiResponse(responseCode = "200", description = "User deleted")
     @SecuredGetById
     ResponseEntity<String> deleteUser(@Parameter(description = "User ID", example = "10")
-                                      @PathVariable Integer id);
+                                      @PathVariable Long id);
 }

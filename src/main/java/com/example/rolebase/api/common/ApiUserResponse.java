@@ -1,4 +1,4 @@
-package com.example.rolebase.config.openapi;
+package com.example.rolebase.api.common;
 
 import com.example.rolebase.dto.response.UserResponse;
 import io.swagger.v3.oas.annotations.media.Content;

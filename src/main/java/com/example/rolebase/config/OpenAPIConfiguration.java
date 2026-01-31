@@ -28,11 +28,14 @@ public class OpenAPIConfiguration {
                 .resolveAsResolvedSchema(new AnnotatedType(ErrorResponse.class))
                 .schema;
 
+        // Configures API metadata, security, and standard responses
         return new OpenAPI()
                 .info(new Info()
                         .title("RBAC Management System API")
                         .version("1.0")
+                        // Configures security and error handling components
                         .description("Role-Based Access Control API"))
+                // Configures security schemes and error response schemas
                 .components(new Components()
                         .addSecuritySchemes(securitySchemeName,
                                 new SecurityScheme()
@@ -46,6 +49,9 @@ public class OpenAPIConfiguration {
                         .addResponses("NotFound", createErrorResponse("Not Found", "Resource not found")));
     }
 
+    /**
+     * Creates API response with error schema and example
+     */
     private ApiResponse createErrorResponse(String error, String message) {
         Map<String, Object> exampleData = new LinkedHashMap<>();
         exampleData.put("timestamp", "2024-03-20T10:00:00Z");
@@ -56,6 +62,7 @@ public class OpenAPIConfiguration {
         Example example = new Example();
         example.setValue(exampleData);
 
+        // Defines error response with schema and example
         return new ApiResponse()
                 .description(error)
                 .content(new Content().addMediaType("application/json",

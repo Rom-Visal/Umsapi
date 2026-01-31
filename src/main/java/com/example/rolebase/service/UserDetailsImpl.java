@@ -11,6 +11,7 @@ public record UserDetailsImpl(User user) implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        // Maps roles to granted authorities with a prefix
         return user().getRoles().stream()
                 .map(userRole -> new SimpleGrantedAuthority(
                         "ROLE_" + userRole.getRole().getName()))
