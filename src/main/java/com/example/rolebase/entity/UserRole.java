@@ -34,6 +34,7 @@ public class UserRole {
     private LocalDateTime assignAt;
     private String assignBy;
 
+    // Sets audit fields before persisting the entity
     @PrePersist
     public void onCreate() {
         this.assignAt = LocalDateTime.now();

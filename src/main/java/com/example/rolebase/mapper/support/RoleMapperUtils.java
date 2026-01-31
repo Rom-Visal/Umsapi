@@ -1,4 +1,4 @@
-package com.example.rolebase.util;
+package com.example.rolebase.mapper.support;
 
 import com.example.rolebase.entity.UserRole;
 import org.springframework.stereotype.Component;

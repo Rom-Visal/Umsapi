@@ -52,7 +52,7 @@ Before running this application, make sure you have
 ## API Access
 Once the application is running, you can access the interactive API documentation at:
 
-`http://localhost:8080/swagger-ui.html`
+`http://localhost:8080/swagger-ui/index.html`
 #### API Documentation Preview
 
 ![img.png](API-Docs.png)

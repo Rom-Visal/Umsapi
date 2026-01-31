@@ -1,13 +1,13 @@
 package com.example.rolebase.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Data
-@AllArgsConstructor
+@Builder
 public class ErrorResponse {
 
     @Schema(description = "Timestamp", example = "2024-01-09T10:30:00")

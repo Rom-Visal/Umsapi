@@ -18,7 +18,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @RequiredArgsConstructor
 public class SecurityConfiguration {
 
-    private final CustomAuthenticationEntryPoint authenticAuthenticationEntryPoint;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     @Bean
     PasswordEncoder passwordEncoder() {
@@ -32,6 +32,7 @@ public class SecurityConfiguration {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
+                // Configures request authorization based on roles and paths
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/auth/**").permitAll()
@@ -39,7 +40,7 @@ public class SecurityConfiguration {
                         .anyRequest().authenticated())
                 // Enable HTTP Basic authentication and set a custom authentication entry point
                 .httpBasic(httpBasic ->
-                        httpBasic.authenticationEntryPoint(authenticAuthenticationEntryPoint));
+                        httpBasic.authenticationEntryPoint(customAuthenticationEntryPoint));
 
         return http.build();
     }

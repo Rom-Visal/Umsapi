@@ -1,7 +1,7 @@
-package com.example.rolebase.config.openapi;
+package com.example.rolebase.api.common;
 
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

@@ -13,7 +13,6 @@ import com.example.rolebase.mapper.UpdateUserRequestMapper;
 import com.example.rolebase.mapper.UserMapper;
 import com.example.rolebase.repository.RoleRepository;
 import com.example.rolebase.repository.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -27,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -43,6 +41,9 @@ public class UserService {
     private final AdminRegistrationMapper adminMapper;
     private final UpdateUserRequestMapper updateMapper;
 
+    /**
+     * Registers user; encodes password; persists and returns a result
+     */
     public UserResponse registerUser(RegistrationRequest request) {
         validateUsernameAndEmail(request.getUsername(), request.getEmail());
         log.info("Proceeding with registration for username: {}", request.getUsername());
@@ -50,49 +51,32 @@ public class UserService {
         User user = userMapper.toEntity(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
-        Role defaultRole = roleRepository.findByName("USER")
-                .orElseThrow(() -> new IllegalStateException("Default USER role not found in the system."));
-
-        user.addRole(defaultRole);
+        user.addRole(resolveDefaultRole());
         userRepository.save(user);
         return userMapper.toResponse(user);
     }
 
+    /**
+     * Registers user with roles; persists and returns a result
+     */
     public UserResponse registerUserByAdmin(AdminRegistrationRequest request) {
         validateUsernameAndEmail(request.getUsername(), request.getEmail());
 
         User user = adminMapper.toEntity(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        Set<Role> rolesToAssign = new HashSet<>();
 
-        if (request.getRoles() != null && !request.getRoles().isEmpty()) {
-            List<Role> foundRoles = roleRepository.findAllByNameIn(request.getRoles());
+        resolveRoles(request.getRoles()).forEach(user::addRole);
 
-            Set<String> foundRoleNames = foundRoles.stream()
-                    .map(Role::getName)
-                    .collect(Collectors.toSet());
-            List<String> invalidRoles = request.getRoles().stream()
-                    .filter(name -> !foundRoleNames.contains(name))
-                    .toList();
-
-            if (!invalidRoles.isEmpty()) {
-                throw new IllegalArgumentException("The following roles do not exist: " + invalidRoles);
-            }
-            rolesToAssign.addAll(foundRoles);
-        } else {
-            Role defaultRole = roleRepository.findByName("USER")
-                    .orElseThrow(() -> new IllegalStateException("Default USER role not found"));
-            rolesToAssign.add(defaultRole);
-        }
-
-        rolesToAssign.forEach(user::addRole);
         userRepository.save(user);
         return userMapper.toResponse(user);
     }
 
+    /**
+     * Updates user details, including password if provided
+     */
     public UpdateUserResponse updateUser(String currentUsername, UpdateUserRequest updatedDetails) {
         User existingUser = userRepository.findByUsernameWithRoles(currentUsername)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         if (!existingUser.isEnabled()) {
             throw new DisabledException(
@@ -102,6 +86,7 @@ public class UserService {
         UserResponse beforeUpdate = userMapper.toResponse(existingUser);
         updateMapper.updateUserFromRequest(updatedDetails, existingUser);
 
+        // Updates password if provided in request
         if (updatedDetails.getPassword() != null && !updatedDetails.getPassword().isBlank()) {
             existingUser.setPassword(passwordEncoder.encode(updatedDetails.getPassword()));
         }
@@ -128,13 +113,13 @@ public class UserService {
         return userPage.map(userMapper::toResponse);
     }
 
-    public UserResponse getUser(Integer id) {
+    public UserResponse getUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID " + id));
         return userMapper.toResponse(user);
     }
 
-    public void deleteUser(Integer userId) {
+    public void deleteUser(Long userId) {
         if (!userRepository.existsById(userId)) {
             throw new UserNotFoundException("User not found");
         }
@@ -156,5 +141,30 @@ public class UserService {
         if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email is already registered");
         }
+    }
+
+    /**
+     * Resolves role names to roles; defaults if empty
+     */
+    private Set<Role> resolveRoles(Set<String> roleNames) {
+        if (roleNames == null || roleNames.isEmpty()) {
+            return Set.of(resolveDefaultRole());
+        }
+
+        List<Role> foundRoles = roleRepository.findAllByNameIn(roleNames);
+        // Verifies all requested roles exist; throws if not
+        if (foundRoles.size() != roleNames.size()) {
+            List<String> foundNames = foundRoles.stream().map(Role::getName).toList();
+            List<String> invalidRoles = roleNames.stream()
+                    .filter(name -> !foundNames.contains(name))
+                    .toList();
+            throw new IllegalArgumentException("The following roles do not exist: " + invalidRoles);
+        }
+        return new HashSet<>(foundRoles);
+    }
+
+    private Role resolveDefaultRole() {
+        return roleRepository.findByName("USER")
+                .orElseThrow(() -> new IllegalStateException("Default USER role not found"));
     }
 }

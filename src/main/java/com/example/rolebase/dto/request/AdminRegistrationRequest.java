@@ -3,6 +3,7 @@ package com.example.rolebase.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Data;
@@ -20,6 +21,7 @@ public class AdminRegistrationRequest {
 
     @Schema(description = "Email", example = "newemail@gmail.com")
     @Email(message = "Invalid input email.")
+    @NotNull(message = "Email is required")
     private String email;
 
     @Schema(description = "Password", example = "newPass@123")

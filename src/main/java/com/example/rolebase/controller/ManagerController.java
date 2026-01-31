@@ -33,7 +33,7 @@ public class ManagerController implements ManagerApi {
 
     @Override
     @GetMapping("/user/{id}")
-    public ResponseEntity<UserResponse> getUser(@PathVariable Integer id) {
+    public ResponseEntity<UserResponse> getUser(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getUser(id));
     }
 }

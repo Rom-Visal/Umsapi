@@ -1,6 +1,6 @@
 package com.example.rolebase.api;
 
-import com.example.rolebase.config.openapi.ApiUserResponse;
+import com.example.rolebase.api.common.ApiUserResponse;
 import com.example.rolebase.dto.request.UpdateUserRequest;
 import com.example.rolebase.dto.response.UpdateUserResponse;
 import com.example.rolebase.dto.response.UserResponse;

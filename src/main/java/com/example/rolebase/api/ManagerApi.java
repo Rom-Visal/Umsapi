@@ -1,9 +1,9 @@
 package com.example.rolebase.api;
 
-import com.example.rolebase.config.openapi.ApiUserListResponse;
-import com.example.rolebase.config.openapi.ApiUserResponse;
-import com.example.rolebase.config.openapi.SecuredEndpoint;
-import com.example.rolebase.config.openapi.SecuredGetById;
+import com.example.rolebase.api.common.ApiUserListResponse;
+import com.example.rolebase.api.common.ApiUserResponse;
+import com.example.rolebase.api.common.SecuredEndpoint;
+import com.example.rolebase.api.common.SecuredGetById;
 import com.example.rolebase.dto.response.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -27,5 +27,5 @@ public interface ManagerApi {
     @Operation(summary = "Get User by ID", description = "Get user details by ID")
     @ApiUserResponse
     @SecuredGetById
-    ResponseEntity<UserResponse> getUser(@Parameter(description = "User ID", example = "1") @PathVariable Integer id);
+    ResponseEntity<UserResponse> getUser(@Parameter(description = "User ID", example = "1") @PathVariable Long id);
 }
