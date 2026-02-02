@@ -15,8 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 @Tag(name = "Authentication", description = "Public APIs for registration and home page")
 public interface AuthApi {
 
-    @Operation(summary = "Welcome Page",
-            description = "Public endpoint, no authentication required")
+    @Operation(summary = "Welcome Page", description = "Public endpoint, no authentication required")
     @ApiResponse(responseCode = "200", description = "Success")
     ResponseEntity<String> home();
 

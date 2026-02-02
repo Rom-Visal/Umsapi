@@ -11,7 +11,7 @@ import java.util.Set;
 public class UserResponse {
 
     @Schema(description = "User ID", example = "1")
-    private Integer id;
+    private Long id;
 
     @Schema(description = "Username", example = "User")
     private String username;

@@ -14,60 +14,67 @@ import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.web.config.EnableSpringDataWebSupport;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.time.LocalDateTime;
+
+import static org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO;
 
 @Configuration
+@EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO)
 public class OpenAPIConfiguration {
 
+    //Configures OpenAPI definition with security and error responses
     @Bean
     public OpenAPI customOpenAPI() {
         final String securitySchemeName = "basicAuth";
+
         Schema<?> errorSchema = ModelConverters.getInstance()
                 .resolveAsResolvedSchema(new AnnotatedType(ErrorResponse.class))
                 .schema;
 
-        // Configures API metadata, security, and standard responses
+        Info apiInfo = new Info()
+                .title("RBAC Management System API")
+                .version("1.0")
+                .description("Role-Based Access Control API");
+
+        SecurityScheme basicAuth = new SecurityScheme()
+                .name(securitySchemeName)
+                .type(SecurityScheme.Type.HTTP)
+                .scheme("basic");
+
+        // Defines reusable security and error response components
+        Components components = new Components()
+                .addSecuritySchemes(securitySchemeName, basicAuth)
+                .addSchemas("ErrorResponse", errorSchema)
+                .addResponses("BadRequest", createErrorResponse("Bad Request", "Validation error"))
+                .addResponses("Unauthorized", createErrorResponse("Unauthorized", "Authentication required. Please provide valid credentials."))
+                .addResponses("Forbidden", createErrorResponse("Forbidden", "Access denied"))
+                .addResponses("NotFound", createErrorResponse("Not Found", "User not found"));
+
         return new OpenAPI()
-                .info(new Info()
-                        .title("RBAC Management System API")
-                        .version("1.0")
-                        // Configures security and error handling components
-                        .description("Role-Based Access Control API"))
-                // Configures security schemes and error response schemas
-                .components(new Components()
-                        .addSecuritySchemes(securitySchemeName,
-                                new SecurityScheme()
-                                        .name(securitySchemeName)
-                                        .type(SecurityScheme.Type.HTTP)
-                                        .scheme("basic"))
-                        .addSchemas("ErrorResponse", errorSchema)
-                        .addResponses("BadRequest", createErrorResponse("Bad Request", "Validation failed"))
-                        .addResponses("Unauthorized", createErrorResponse("Unauthorized", "Full authentication is required"))
-                        .addResponses("Forbidden", createErrorResponse("Forbidden", "Access denied"))
-                        .addResponses("NotFound", createErrorResponse("Not Found", "Resource not found")));
+                .info(apiInfo)
+                .components(components);
     }
 
-    /**
-     * Creates API response with error schema and example
-     */
+    // Creates API response with error details and schema
     private ApiResponse createErrorResponse(String error, String message) {
-        Map<String, Object> exampleData = new LinkedHashMap<>();
-        exampleData.put("timestamp", "2024-03-20T10:00:00Z");
-        exampleData.put("error", error);
-        exampleData.put("message", message);
-        exampleData.put("path", "/api/v1/...");
+        ErrorResponse errorSample = ErrorResponse.builder()
+                .timestamp(LocalDateTime.parse("2024-03-20T10:00:00"))
+                .error(error)
+                .message(message)
+                .path("/api/v1/...")
+                .build();
 
-        Example example = new Example();
-        example.setValue(exampleData);
+        Example example = new Example().value(errorSample);
+        Schema<?> schemaRef = new Schema<>().$ref("#/components/schemas/ErrorResponse");
+        MediaType mediaType = new MediaType()
+                .schema(schemaRef)
+                .addExamples("default", example);
+        Content content = new Content().addMediaType("application/json", mediaType);
 
-        // Defines error response with schema and example
         return new ApiResponse()
                 .description(error)
-                .content(new Content().addMediaType("application/json",
-                        new MediaType()
-                                .schema(new Schema<>().$ref("#/components/schemas/ErrorResponse"))
-                                .addExamples("default", example)));
+                .content(content);
     }
 }

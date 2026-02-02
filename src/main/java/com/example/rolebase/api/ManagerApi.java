@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 
@@ -22,7 +23,7 @@ public interface ManagerApi {
     @Operation(summary = "Get All Users", description = "Retrieve all users in system with pagination support")
     @SecuredEndpoint
     @ApiUserListResponse
-    ResponseEntity<Page<UserResponse>> getAllUsers(@ParameterObject Pageable pageable);
+    ResponseEntity<Page<UserResponse>> getAllUsers(@ParameterObject @PageableDefault Pageable pageable);
 
     @Operation(summary = "Get User by ID", description = "Get user details by ID")
     @ApiUserResponse
