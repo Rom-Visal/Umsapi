@@ -22,8 +22,9 @@ public interface AuthApi {
     @Operation(summary = "Register New User", description = "Register with USER role by default")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "User registered successfully",
-                    content = @Content(schema = @Schema(implementation = UserResponse.class))),
-            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequest")
+                    content = @Content(schema = @Schema(implementation = UserResponse.class)
+                            , mediaType = "application/json")),
+            @ApiResponse(responseCode = "400", ref = "BadRequest")
     })
     ResponseEntity<UserResponse> registerUser(@Valid @RequestBody RegistrationRequest request);
 }

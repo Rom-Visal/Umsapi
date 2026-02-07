@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-@ApiResponse(responseCode = "401", ref = "#/components/responses/Unauthorized")
-@ApiResponse(responseCode = "403", ref = "#/components/responses/Forbidden")
+@ApiResponse(responseCode = "401", ref = "Unauthorized")
+@ApiResponse(responseCode = "403", ref = "Forbidden")
 public @interface SecuredEndpoint {
 }

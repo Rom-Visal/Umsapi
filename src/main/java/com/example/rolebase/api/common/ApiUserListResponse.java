@@ -14,6 +14,8 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @ApiResponse(responseCode = "200", description = "Success",
-        content = @Content(array = @ArraySchema(schema = @Schema(implementation = UserResponse.class))))
+        content = @Content(array = @ArraySchema(schema = @Schema(implementation = UserResponse.class)),
+                mediaType = "application/json")
+)
 public @interface ApiUserListResponse {
 }

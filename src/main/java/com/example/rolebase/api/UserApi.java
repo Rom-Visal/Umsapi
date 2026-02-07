@@ -19,17 +19,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 public interface UserApi {
 
     @Operation(summary = "Get Profile", description = "Get current user profile")
-    @ApiResponse(responseCode = "401", ref = "#/components/responses/Unauthorized")
+    @ApiResponse(responseCode = "401", ref = "Unauthorized")
     @ApiUserResponse
-    ResponseEntity<UserResponse> getProfile(@Parameter(hidden = true)
-                                            Authentication authentication);
+    ResponseEntity<UserResponse> getProfile(@Parameter(hidden = true) Authentication authentication);
 
-    @Operation(summary = "Update Profile",
-            description = "Update email or password. Account must be enabled")
+    @Operation(summary = "Update Profile", description = "Update email or password. Account must be enabled")
     @ApiUserResponse
-    @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequest")
-    @ApiResponse(responseCode = "401", ref = "#/components/responses/Unauthorized")
-    ResponseEntity<UpdateUserResponse> updateProfile(
-            @Valid @RequestBody UpdateUserRequest request,
-            @Parameter(hidden = true) Authentication auth);
+    @ApiResponse(responseCode = "400", ref = "BadRequest")
+    @ApiResponse(responseCode = "401", ref = "Unauthorized")
+    ResponseEntity<UpdateUserResponse> updateProfile(@Valid @RequestBody UpdateUserRequest request, @Parameter(hidden = true) Authentication auth);
 }

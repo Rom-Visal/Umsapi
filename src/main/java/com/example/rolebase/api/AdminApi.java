@@ -23,7 +23,7 @@ public interface AdminApi {
     @Operation(summary = "Create User", description = "Create user with custom roles")
     @ApiUserResponse
     @SecuredEndpoint
-    @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequest")
+    @ApiResponse(responseCode = "400", ref = "BadRequest")
     ResponseEntity<UserResponse> createUser(@Valid @RequestBody AdminRegistrationRequest request);
 
     @Operation(summary = "Update User Status", description = "Enable or disable user account")
@@ -36,6 +36,5 @@ public interface AdminApi {
     @Operation(summary = "Delete User", description = "Permanently delete user")
     @ApiResponse(responseCode = "200", description = "User deleted")
     @SecuredGetById
-    ResponseEntity<String> deleteUser(@Parameter(description = "User ID", example = "10")
-                                      @PathVariable Long id);
+    ResponseEntity<String> deleteUser(@Parameter(description = "User ID", example = "10") @PathVariable Long id);
 }

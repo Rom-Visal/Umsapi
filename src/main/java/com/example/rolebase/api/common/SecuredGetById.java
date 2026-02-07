@@ -11,8 +11,8 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @ApiResponses( {
-    @ApiResponse(responseCode = "401", ref = "#/components/responses/Unauthorized"),
-    @ApiResponse(responseCode = "403", ref = "#/components/responses/Forbidden"),
-    @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFound")
+        @ApiResponse(responseCode = "401", ref = "Unauthorized"),
+        @ApiResponse(responseCode = "403", ref = "Forbidden"),
+        @ApiResponse(responseCode = "404", ref = "NotFound")
 })
 public @interface SecuredGetById {}
