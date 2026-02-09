@@ -23,9 +23,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -151,16 +151,18 @@ public class UserService {
             return Set.of(resolveDefaultRole());
         }
 
-        List<Role> foundRoles = roleRepository.findAllByNameIn(roleNames);
+        Set<Role> foundRoles = roleRepository.findAllByNameIn(roleNames);
         // Verifies all requested roles exist; throws if not
         if (foundRoles.size() != roleNames.size()) {
-            List<String> foundNames = foundRoles.stream().map(Role::getName).toList();
+            Set<String> foundNames = foundRoles.stream().map(Role::getName)
+                    .collect(Collectors.toSet());
+
             List<String> invalidRoles = roleNames.stream()
                     .filter(name -> !foundNames.contains(name))
                     .toList();
             throw new IllegalArgumentException("The following roles do not exist: " + invalidRoles);
         }
-        return new HashSet<>(foundRoles);
+        return foundRoles;
     }
 
     private Role resolveDefaultRole() {
