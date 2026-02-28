@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @Tag(name = "Admin Management", description = "Admin-only APIs for user management")
-@SecurityRequirement(name = "basicAuth")
+@SecurityRequirement(name = "bearerAuth")
 public interface AdminApi {
 
     @Operation(summary = "Create User", description = "Create user with custom roles")
