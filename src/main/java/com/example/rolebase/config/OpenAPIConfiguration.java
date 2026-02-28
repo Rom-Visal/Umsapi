@@ -27,7 +27,7 @@ public class OpenAPIConfiguration {
     //Configures OpenAPI definition with security and error responses
     @Bean
     public OpenAPI customOpenAPI() {
-        final String securitySchemeName = "basicAuth";
+        final String securitySchemeName = "bearerAuth";
 
         Schema<?> errorSchema = ModelConverters.getInstance()
                 .resolveAsResolvedSchema(new AnnotatedType(ErrorResponse.class))
@@ -38,14 +38,15 @@ public class OpenAPIConfiguration {
                 .version("1.0")
                 .description("Role-Based Access Control API");
 
-        SecurityScheme basicAuth = new SecurityScheme()
+        SecurityScheme bearerAuth = new SecurityScheme()
                 .name(securitySchemeName)
                 .type(SecurityScheme.Type.HTTP)
-                .scheme("basic");
+                .scheme("bearer")
+                .bearerFormat("JWT");
 
         // Defines reusable security and error response components
         Components components = new Components()
-                .addSecuritySchemes(securitySchemeName, basicAuth)
+                .addSecuritySchemes(securitySchemeName, bearerAuth)
                 .addSchemas("ErrorResponse", errorSchema)
                 .addResponses("BadRequest", createErrorResponse("Bad Request", "Validation error"))
                 .addResponses("Unauthorized", createErrorResponse("Unauthorized", "Authentication required. Please provide valid credentials."))

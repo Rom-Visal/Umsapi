@@ -17,7 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 
 @Tag(name = "Manager Operations", description = "APIs for viewing users")
-@SecurityRequirement(name = "basicAuth")
+@SecurityRequirement(name = "bearerAuth")
 public interface ManagerApi {
 
     @Operation(summary = "Get All Users", description = "Retrieve all users in system with pagination support")

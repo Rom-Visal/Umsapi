@@ -15,7 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.RequestBody;
 
 @Tag(name = "User Profile", description = "APIs for user profile management")
-@SecurityRequirement(name = "basicAuth")
+@SecurityRequirement(name = "bearerAuth")
 public interface UserApi {
 
     @Operation(summary = "Get Profile", description = "Get current user profile")

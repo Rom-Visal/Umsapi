@@ -1,6 +1,8 @@
 package com.example.rolebase.api;
 
+import com.example.rolebase.dto.request.LoginRequest;
 import com.example.rolebase.dto.request.RegistrationRequest;
+import com.example.rolebase.dto.response.AuthResponse;
 import com.example.rolebase.dto.response.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -27,4 +29,13 @@ public interface AuthApi {
             @ApiResponse(responseCode = "400", ref = "BadRequest")
     })
     ResponseEntity<UserResponse> registerUser(@Valid @RequestBody RegistrationRequest request);
+
+    @Operation(summary = "Login", description = "Authenticate and return JWT bearer token")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Authenticated successfully",
+                    content = @Content(schema = @Schema(implementation = AuthResponse.class),
+                            mediaType = "application/json")),
+            @ApiResponse(responseCode = "401", ref = "Unauthorized")
+    })
+    ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request);
 }
