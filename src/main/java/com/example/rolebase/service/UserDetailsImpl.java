@@ -27,4 +27,9 @@ public record UserDetailsImpl(User user) implements UserDetails {
     public String getUsername() {
         return user().getUsername();
     }
+
+    @Override
+    public boolean isEnabled() {
+        return user().isEnabled();
+    }
 }
