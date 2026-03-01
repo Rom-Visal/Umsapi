@@ -52,6 +52,7 @@ public class GlobalExceptionHandler {
             UserNotFoundException ex, WebRequest request) {
         return buildErrorResponse(HttpStatus.NOT_FOUND, "Not Found", ex, request);
     }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
             IllegalArgumentException ex, WebRequest request) {

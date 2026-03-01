@@ -1,6 +1,7 @@
 package com.example.rolebase.api;
 
 import com.example.rolebase.dto.request.LoginRequest;
+import com.example.rolebase.dto.request.RefreshTokenRequest;
 import com.example.rolebase.dto.request.RegistrationRequest;
 import com.example.rolebase.dto.response.AuthResponse;
 import com.example.rolebase.dto.response.UserResponse;
@@ -38,4 +39,20 @@ public interface AuthApi {
             @ApiResponse(responseCode = "401", ref = "Unauthorized")
     })
     ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request);
+
+    @Operation(summary = "Refresh Access Token", description = "Rotate refresh token and issue new token pair")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Tokens refreshed successfully",
+                    content = @Content(schema = @Schema(implementation = AuthResponse.class),
+                            mediaType = "application/json")),
+            @ApiResponse(responseCode = "401", ref = "Unauthorized")
+    })
+    ResponseEntity<AuthResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request);
+
+    @Operation(summary = "Logout", description = "Revoke current refresh token")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Logged out successfully"),
+            @ApiResponse(responseCode = "400", ref = "BadRequest")
+    })
+    ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request);
 }
