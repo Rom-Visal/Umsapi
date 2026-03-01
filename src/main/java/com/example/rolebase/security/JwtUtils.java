@@ -13,41 +13,84 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Component
 public class JwtUtils {
 
+    private static final String TYPE_CLAIM = "type";
+    private static final String ACCESS_TOKEN_TYPE = "access";
+    private static final String REFRESH_TOKEN_TYPE = "refresh";
+
     @Value("${jwt.secret}")
-    private String jwtSecret;
+    private String accessSecret;
+
+    @Value("${jwt.refresh-secret:${jwt.secret}}")
+    private String refreshSecret;
 
     @Getter
-    @Value("${jwt.expiration-ms:86400000}")
-    private long jwtExpirationMs;
+    @Value("${jwt.expiration-ms:900000}")
+    private long accessTokenExpirationMs;
 
-    public String generateToken(UserDetails userDetails) {
+    @Getter
+    @Value("${jwt.refresh-expiration-ms:604800000}")
+    private long refreshTokenExpirationMs;
+
+    public String generateAccessToken(UserDetails userDetails) {
+        return buildToken(userDetails.getUsername(), accessTokenExpirationMs, getAccessSigningKey(),
+                ACCESS_TOKEN_TYPE, UUID.randomUUID().toString());
+    }
+
+    public String generateRefreshToken(UserDetails userDetails) {
+        return buildToken(userDetails.getUsername(), refreshTokenExpirationMs, getRefreshSigningKey(),
+                REFRESH_TOKEN_TYPE, UUID.randomUUID().toString());
+    }
+
+    public String getUsernameFromAccessToken(String token) {
+        return getClaims(token, getAccessSigningKey()).getSubject();
+    }
+
+    public String getUsernameFromRefreshToken(String token) {
+        return getClaims(token, getRefreshSigningKey()).getSubject();
+    }
+
+    public Date getRefreshTokenExpiration(String token) {
+        return getClaims(token, getRefreshSigningKey()).getExpiration();
+    }
+
+    public boolean validateAccessToken(String token) {
+        return validateToken(token, getAccessSigningKey(), ACCESS_TOKEN_TYPE);
+    }
+
+    public boolean validateRefreshToken(String token) {
+        return validateToken(token, getRefreshSigningKey(), REFRESH_TOKEN_TYPE);
+    }
+
+    private String buildToken(String username, long expirationMs, SecretKey signingKey,
+                              String tokenType, String jti) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
+        Date expiryDate = new Date(now.getTime() + expirationMs);
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(TYPE_CLAIM, tokenType);
 
         return Jwts.builder()
-                .subject(userDetails.getUsername())
+                .claims(claims)
+                .subject(username)
                 .issuedAt(now)
                 .expiration(expiryDate)
-                .signWith(getSigningKey())
+                .id(jti)
+                .signWith(signingKey)
                 .compact();
     }
 
-    public String getUsernameFromToken(String token) {
-        return getClaims(token).getSubject();
-    }
-
-    public boolean validateToken(String token) {
+    private boolean validateToken(String token, SecretKey key, String expectedType) {
         try {
-            Jwts.parser()
-                    .verifyWith(getSigningKey())
-                    .build()
-                    .parseSignedClaims(token);
-            return true;
+            Claims claims = getClaims(token, key);
+            Object tokenType = claims.get(TYPE_CLAIM);
+            return expectedType.equals(tokenType);
         } catch (SecurityException ex) {
             log.warn("Invalid JWT signature");
         } catch (io.jsonwebtoken.MalformedJwtException ex) {
@@ -62,16 +105,21 @@ public class JwtUtils {
         return false;
     }
 
-    private Claims getClaims(String token) {
+    private Claims getClaims(String token, SecretKey key) {
         return Jwts.parser()
-                .verifyWith(getSigningKey())
+                .verifyWith(key)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
     }
 
-    private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+    private SecretKey getAccessSigningKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(accessSecret);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    private SecretKey getRefreshSigningKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(refreshSecret);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }
