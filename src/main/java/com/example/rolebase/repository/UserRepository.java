@@ -16,6 +16,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
             "LEFT JOIN FETCH ur.role " + "WHERE LOWER(u.username) = LOWER(:username)")
     Optional<User> findByUsernameWithRoles(@Param("username") String username);
 
+    Optional<User> findByUsernameIgnoreCase(String username);
+
     boolean existsByUsernameIgnoreCase(String username);
 
     boolean existsByEmail(String email);
