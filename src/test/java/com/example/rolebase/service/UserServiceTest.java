@@ -1,14 +1,30 @@
 package com.example.rolebase.service;
 
+import com.example.rolebase.dto.request.RegistrationRequest;
+import com.example.rolebase.dto.request.UpdateUserRequest;
+import com.example.rolebase.dto.response.UserResponse;
+import com.example.rolebase.entity.Role;
+import com.example.rolebase.entity.User;
+import com.example.rolebase.exception.UserNotFoundException;
+import com.example.rolebase.mapper.UpdateUserRequestMapper;
+import com.example.rolebase.mapper.UserMapper;
+import com.example.rolebase.repository.RoleRepository;
 import com.example.rolebase.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import java.util.Optional;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -16,17 +32,165 @@ class UserServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private RoleRepository roleRepository;
+
+    @Mock
+    private UserMapper userMapper;
+
+    @Mock
+    private UpdateUserRequestMapper updateMapper;
+
     @InjectMocks
     private UserService userService;
 
     @Test
+    void registerUser_encodesPasswordAndAssignsDefaultRole() {
+        RegistrationRequest request = RegistrationRequest.builder()
+                .username("john")
+                .email("john@example.com")
+                .password("Password@123")
+                .build();
+
+        Role userRole = new Role();
+        userRole.setName("USER");
+
+        User mappedUser = new User();
+        mappedUser.setUsername("john");
+        mappedUser.setEmail("john@example.com");
+
+        UserResponse expectedResponse = UserResponse.builder()
+                .id(1L)
+                .username("john")
+                .email("john@example.com")
+                .roles(Set.of("USER"))
+                .enabled(true)
+                .build();
+
+        when(userRepository.existsByUsernameIgnoreCase("john")).thenReturn(false);
+        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
+        when(userMapper.toEntity(request)).thenReturn(mappedUser);
+        when(passwordEncoder.encode("Password@123")).thenReturn("encoded");
+        when(roleRepository.findByName("USER")).thenReturn(Optional.of(userRole));
+        when(userMapper.toResponse(mappedUser)).thenReturn(expectedResponse);
+
+        UserResponse response = userService.registerUser(request);
+
+        assertSame(expectedResponse, response);
+        assertEquals("encoded", mappedUser.getPassword());
+        assertNotNull(mappedUser.getRoles());
+        assertEquals(1, mappedUser.getRoles().size());
+
+        verify(userRepository).save(mappedUser);
+    }
+
+    @Test
+    void registerUser_throwsWhenUsernameAlreadyExists() {
+        RegistrationRequest request = RegistrationRequest.builder()
+                .username("john")
+                .email("john@example.com")
+                .password("Password@123")
+                .build();
+
+        when(userRepository.existsByUsernameIgnoreCase("john")).thenReturn(true);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> userService.registerUser(request));
+
+        assertEquals("Username is already taken", exception.getMessage());
+    }
+
+    @Test
+    void updateUser_throwsDisabledExceptionWhenUserIsDisabled() {
+        User existingUser = new User();
+        existingUser.setEnabled(false);
+
+        when(userRepository.findByUsernameWithRoles("john")).thenReturn(Optional.of(existingUser));
+
+        assertThrows(DisabledException.class,
+                () -> userService.updateUser("john", UpdateUserRequest.builder().build()));
+    }
+
+    @Test
+    void updateUserStatus_throwsWhenUserNotFound() {
+        when(userRepository.updateUserEnabledStatus("john", true)).thenReturn(0);
+
+        assertThrows(UserNotFoundException.class, () -> userService.updateUserStatus("john", true));
+    }
+
+    @Test
     void updateUserStatus_updatesEnabledFlag() {
-        String username = "john";
-        boolean enabled = true;
-        when(userRepository.updateUserEnabledStatus(username, enabled)).thenReturn(1);
+        when(userRepository.updateUserEnabledStatus("john", true)).thenReturn(1);
 
-        userService.updateUserStatus(username, enabled);
+        userService.updateUserStatus("john", true);
 
-        verify(userRepository).updateUserEnabledStatus(username, enabled);
+        verify(userRepository).updateUserEnabledStatus("john", true);
+    }
+
+    @Test
+    void deleteUser_throwsWhenIdDoesNotExist() {
+        when(userRepository.existsById(99L)).thenReturn(false);
+
+        assertThrows(UserNotFoundException.class, () -> userService.deleteUser(99L));
+    }
+
+    @Test
+    void getProfile_throwsWhenUsernameDoesNotExist() {
+        when(userRepository.findByUsernameWithRoles("john")).thenReturn(Optional.empty());
+
+        assertThrows(UsernameNotFoundException.class, () -> userService.getProfile("john"));
+    }
+
+    @Test
+    void updateUser_encodesNewPasswordWhenProvided() {
+        User existingUser = new User();
+        existingUser.setEnabled(true);
+
+        UpdateUserRequest request = UpdateUserRequest.builder()
+                .password("NewPassword@123")
+                .build();
+
+        UserResponse beforeUpdate = UserResponse.builder().username("john").build();
+        UserResponse afterUpdate = UserResponse.builder().username("john").build();
+
+        when(userRepository.findByUsernameWithRoles("john")).thenReturn(Optional.of(existingUser));
+        when(passwordEncoder.encode("NewPassword@123")).thenReturn("encoded-new-password");
+        when(userMapper.toResponse(existingUser)).thenReturn(beforeUpdate, afterUpdate);
+        when(userRepository.save(existingUser)).thenReturn(existingUser);
+
+        userService.updateUser("john", request);
+
+        verify(updateMapper).updateUserFromRequest(request, existingUser);
+        assertEquals("encoded-new-password", existingUser.getPassword());
+        verify(userRepository).save(existingUser);
+        verify(userMapper, times(2)).toResponse(existingUser);
+    }
+
+    @Test
+    void updateUser_throwsWhenUserDoesNotExist() {
+        when(userRepository.findByUsernameWithRoles("john")).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class,
+                () -> userService.updateUser("john", UpdateUserRequest.builder().build()));
+    }
+
+    @Test
+    void registerUser_throwsWhenDefaultRoleMissing() {
+        RegistrationRequest request = RegistrationRequest.builder()
+                .username("john")
+                .email("john@example.com")
+                .password("Password@123")
+                .build();
+
+        when(userRepository.existsByUsernameIgnoreCase("john")).thenReturn(false);
+        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
+        when(userMapper.toEntity(request)).thenReturn(new User());
+        when(passwordEncoder.encode(any())).thenReturn("encoded");
+        when(roleRepository.findByName("USER")).thenReturn(Optional.empty());
+
+        assertThrows(IllegalStateException.class, () -> userService.registerUser(request));
     }
 }
