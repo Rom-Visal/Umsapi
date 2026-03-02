@@ -2,6 +2,7 @@ package com.example.rolebase.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SecurityException;
@@ -86,18 +87,14 @@ public class JwtUtils {
                 .compact();
     }
 
-    private boolean validateToken(String token, SecretKey key, String expectedType) {
+    private boolean validateToken(String token, SecretKey key, String expectedType) throws io.jsonwebtoken.ExpiredJwtException, io.jsonwebtoken.MalformedJwtException {
         try {
             Claims claims = getClaims(token, key);
             Object tokenType = claims.get(TYPE_CLAIM);
             return expectedType.equals(tokenType);
         } catch (SecurityException ex) {
             log.warn("Invalid JWT signature");
-        } catch (io.jsonwebtoken.MalformedJwtException ex) {
-            log.warn("Malformed JWT token");
-        } catch (io.jsonwebtoken.ExpiredJwtException ex) {
-            log.warn("Expired JWT token");
-        } catch (io.jsonwebtoken.UnsupportedJwtException ex) {
+        } catch (UnsupportedJwtException ex) {
             log.warn("Unsupported JWT token");
         } catch (IllegalArgumentException ex) {
             log.warn("JWT claims string is empty");
