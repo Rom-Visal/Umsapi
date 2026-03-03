@@ -1,11 +1,13 @@
 package com.example.rolebase.service;
 
+import com.example.rolebase.dto.request.AdminRegistrationRequest;
 import com.example.rolebase.dto.request.RegistrationRequest;
 import com.example.rolebase.dto.request.UpdateUserRequest;
 import com.example.rolebase.dto.response.UserResponse;
 import com.example.rolebase.entity.Role;
 import com.example.rolebase.entity.User;
 import com.example.rolebase.exception.UserNotFoundException;
+import com.example.rolebase.mapper.AdminRegistrationMapper;
 import com.example.rolebase.mapper.UpdateUserRequestMapper;
 import com.example.rolebase.mapper.UserMapper;
 import com.example.rolebase.repository.RoleRepository;
@@ -40,6 +42,9 @@ class UserServiceTest {
 
     @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private AdminRegistrationMapper adminMapper;
 
     @Mock
     private UpdateUserRequestMapper updateMapper;
@@ -192,5 +197,72 @@ class UserServiceTest {
         when(roleRepository.findByName("USER")).thenReturn(Optional.empty());
 
         assertThrows(IllegalStateException.class, () -> userService.registerUser(request));
+    }
+
+    @Test
+    void registerUser_throwsWhenEmailAlreadyExists() {
+        RegistrationRequest request = RegistrationRequest.builder()
+                .username("john")
+                .email("john@example.com")
+                .password("Password@123")
+                .build();
+
+        when(userRepository.existsByUsernameIgnoreCase("john")).thenReturn(false);
+        when(userRepository.existsByEmail("john@example.com")).thenReturn(true);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> userService.registerUser(request));
+        assertEquals("Email is already registered", exception.getMessage());
+    }
+
+    @Test
+    void registerUserByAdmin_throwsWhenAnyRoleIsInvalid() {
+        AdminRegistrationRequest request = AdminRegistrationRequest.builder()
+                .username("john")
+                .email("john@example.com")
+                .password("Password@123")
+                .roles(Set.of("USER", "MISSING"))
+                .build();
+
+        Role userRole = new Role();
+        userRole.setName("USER");
+
+        when(userRepository.existsByUsernameIgnoreCase("john")).thenReturn(false);
+        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
+        when(adminMapper.toEntity(request)).thenReturn(new User());
+        when(passwordEncoder.encode("Password@123")).thenReturn("encoded");
+        when(roleRepository.findAllByNameIn(request.getRoles())).thenReturn(Set.of(userRole));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> userService.registerUserByAdmin(request));
+        assertTrue(exception.getMessage().contains("The following roles do not exist"));
+    }
+
+    @Test
+    void registerUserByAdmin_usesDefaultRoleWhenRolesMissing() {
+        AdminRegistrationRequest request = AdminRegistrationRequest.builder()
+                .username("john")
+                .email("john@example.com")
+                .password("Password@123")
+                .roles(null)
+                .build();
+
+        Role defaultRole = new Role();
+        defaultRole.setName("USER");
+        User mappedUser = new User();
+        UserResponse expected = UserResponse.builder().username("john").build();
+
+        when(userRepository.existsByUsernameIgnoreCase("john")).thenReturn(false);
+        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
+        when(adminMapper.toEntity(request)).thenReturn(mappedUser);
+        when(passwordEncoder.encode("Password@123")).thenReturn("encoded");
+        when(roleRepository.findByName("USER")).thenReturn(Optional.of(defaultRole));
+        when(userMapper.toResponse(mappedUser)).thenReturn(expected);
+
+        UserResponse actual = userService.registerUserByAdmin(request);
+
+        assertEquals(expected, actual);
+        assertEquals(1, mappedUser.getRoles().size());
+        verify(userRepository).save(mappedUser);
     }
 }
