@@ -16,6 +16,12 @@ public class AdminController implements AdminApi {
     private final UserService userService;
 
     @Override
+    @GetMapping("/ping")
+    public ResponseEntity<String> ping() {
+        return ResponseEntity.ok("Admin endpoint is working.");
+    }
+
+    @Override
     @PostMapping("/create-user")
     public ResponseEntity<UserResponse> createUser(AdminRegistrationRequest request) {
         UserResponse response = userService.registerUserByAdmin(request);

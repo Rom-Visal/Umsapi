@@ -20,6 +20,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 @SecurityRequirement(name = "bearerAuth")
 public interface AdminApi {
 
+    @Operation(summary = "Admin Ping", description = "Simple health-style endpoint for admin APIs")
+    @ApiResponse(responseCode = "200", description = "Admin API reachable")
+    @SecuredEndpoint
+    ResponseEntity<String> ping();
+
     @Operation(summary = "Create User", description = "Create user with custom roles")
     @ApiUserResponse
     @SecuredEndpoint
