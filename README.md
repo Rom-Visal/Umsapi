@@ -1,58 +1,66 @@
-# Spring Boot API Project ![spring boot icon](https://img.icons8.com/color/48/spring-logo.png)
+# Role-Based Access Control API ![spring boot icon](https://img.icons8.com/color/48/spring-logo.png)
 
-A RESTful web service built with Spring Boot, Focusing on clean code practices, Database optimization, and security design.
+A comprehensive RESTful web service built with **Spring Boot 3.5**, focusing on **Role-Based Access Control (RBAC)**, secure authentication, and database optimization.
 
-## Features
+## 🚀 Key Features
 
-* **Data Mapping:** Integrated **MapStruct** to handle DTO-to-Entity conversions, reducing boilerplate and improving maintainability.
-* **Database Optimization:** Resolved **N+1 select problems** using targeted queries and implemented **Database Indexing** to improve search performance.
-* **Security:** Configured **Spring Security** with based authentication and custom entry points.
-* **Advanced Relationships:** Implemented a Many-to-Many relationship between Users and Roles using a dedicated junction table with **Auditing** support.
-  
-  <img width="50%" alt="image" src="https://github.com/user-attachments/assets/80d5419d-4ba7-4397-81af-aec2b0caa123" />
+* **Authentication & Authorization:** Secure JWT-based authentication with Access and Refresh tokens.
+* **Role-Based Access Control (RBAC):** Managed user roles and permissions for secure endpoint access.
+* **Data Mapping:** Integrated **MapStruct** for efficient DTO-to-Entity conversions, reducing boilerplate.
+* **Database Optimization:** Resolved **N+1 select problems** using targeted queries and implemented **Database Indexing**.
+* **Advanced Relationships:** Many-to-Many relationship between Users and Roles with **Auditing** support.
+* **Global Exception Handling:** Centralized error management using `@ControllerAdvice` for consistent responses.
+* **API Documentation:** Fully documented with **Swagger/OpenAPI 3**, including detailed schemas.
 
-* **Global Exception Handling:** Centralized error management using `@ControllerAdvice` to provide consistent API responses.
-  
-  <img width="70%" alt="image" src="https://github.com/user-attachments/assets/3ac9e564-8334-41e1-b075-48e013ba47ac" />
+## 🛠️ Tech Stack
 
-* **API Documentation:** Fully documented with **Swagger/OpenAPI**, including detailed request/response schemas.
-
-## Tech Stack
-
-* Java: 17+
-* **Spring Boot**: 3.x
+* **Java**: 21
+* **Framework**: Spring Boot 3.5.11
+* **Security**: Spring Security & JWT (jjwt)
 * **Data Access**: Spring Data JPA
 * **Database**: PostgreSQL
 * **Mapping**: MapStruct
-* **API Docs**: SpringDoc OpenAPI
+* **API Documentation**: SpringDoc OpenAPI 2.8.15
+* **Utility**: Lombok
 
-## Prerequisites
-Before running this application, make sure you have
+## 📋 Prerequisites
 
-* Java 17 or higher
-* PostgreSQL Database
-* IDE (IntelliJ IDEA, Eclipse, VS Code)
+Before running this application, ensure you have:
 
-## How to Run
+* **Java 21** or higher
+* **PostgreSQL** Database
+* **Maven** (included via `./mvnw`)
+* IDE (IntelliJ IDEA, Eclipse, or VS Code)
+
+## ⚙️ Configuration
 
 1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Rom-Visal/Spring-Boot-REST-API.git
+   cd Spring-Boot-REST-API
    ```
-    git clone https://github.com/Rom-Visal/Spring-Boot-REST-API.git
-   
-   ```
-2. **Configure Database:**
-   ```
-    spring.datasource.url=jdbc:postgresql://localhost:3306/your_database
-    spring.datasource.username=your_username
-    spring.datasource.password=your_password
-    spring.jpa.hibernate.ddl-auto=update
-    spring.jpa.show-sql=true
-   ```
-   
-## API Access
-Once the application is running, you can access the interactive API documentation at:
 
-`http://localhost:8080/swagger-ui/index.html`
-#### API Documentation Preview
+2. **Configure Database (src/main/resources/application.properties):**
+   ```properties
+   spring.datasource.url=jdbc:postgresql://localhost:5432/your_database
+   spring.datasource.username=your_username
+   spring.datasource.password=your_password
+   spring.jpa.hibernate.ddl-auto=update
+   ```
 
-![img.png](API-Docs.png)
+3. **Run the Application:**
+   ```bash
+   ./mvnw spring-boot:run
+   ```
+
+## 📖 API Documentation
+
+Once the application is running, access the interactive Swagger UI at:
+
+[http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
+
+#### API Preview
+![img.png](Documentation.png)
+
+---
+Developed by [Rom Visal](https://github.com/Rom-Visal)
