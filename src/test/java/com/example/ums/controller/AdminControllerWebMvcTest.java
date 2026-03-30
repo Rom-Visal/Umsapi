@@ -35,7 +35,7 @@ class AdminControllerWebMvcTest {
     private UserDetailsServiceImpl userDetailsService;
 
     @Test
-    void deleteUser_returnsNotFoundContractWhenServiceThrowsUserNotFound() throws Exception {
+    void deleteUser_notFound_errorResponse() throws Exception {
         doThrow(new UserNotFoundException("User not found"))
                 .when(userService).deleteUser(100L);
 

@@ -37,7 +37,7 @@ class AuthTokenFilterTest {
     }
 
     @Test
-    void doFilterInternal_setsAuthenticationWhenAccessTokenIsValid() throws ServletException, IOException {
+    void doFilter_validToken_authenticates() throws ServletException, IOException {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer valid-token");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -62,7 +62,7 @@ class AuthTokenFilterTest {
     }
 
     @Test
-    void doFilterInternal_doesNotAuthenticateWhenTokenInvalid() throws ServletException, IOException {
+    void doFilter_invalidToken_noAuth() throws ServletException, IOException {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer invalid-token");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -77,7 +77,7 @@ class AuthTokenFilterTest {
     }
 
     @Test
-    void doFilterInternal_skipsJwtValidationWhenAuthorizationHeaderMissing() throws ServletException, IOException {
+    void doFilter_missingHeader_skipsJwt() throws ServletException, IOException {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
@@ -90,7 +90,7 @@ class AuthTokenFilterTest {
     }
 
     @Test
-    void doFilterInternal_skipsJwtValidationWhenAuthorizationHeaderIsNotBearer() throws ServletException, IOException {
+    void doFilter_nonBearerHeader_skipsJwt() throws ServletException, IOException {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Basic abc123");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -104,7 +104,7 @@ class AuthTokenFilterTest {
     }
 
     @Test
-    void doFilterInternal_continuesChainWhenJwtProcessingThrowsException() throws ServletException, IOException {
+    void doFilter_exception_continuesChain() throws ServletException, IOException {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer boom-token");
         MockHttpServletResponse response = new MockHttpServletResponse();

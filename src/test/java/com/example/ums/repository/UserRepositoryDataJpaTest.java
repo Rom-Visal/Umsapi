@@ -26,7 +26,7 @@ class UserRepositoryDataJpaTest {
     private EntityManager entityManager;
 
     @Test
-    void findByUsernameWithRoles_returnsUserAndRoleAssociations() {
+    void findByUsername_returnsUserWithRoles() {
         Role userRole = new Role();
         userRole.setName("USER");
         userRole.setDescription("Standard user role");
@@ -48,7 +48,7 @@ class UserRepositoryDataJpaTest {
     }
 
     @Test
-    void updateUserEnabledStatus_updatesMatchingUserCaseInsensitively() {
+    void updateStatus_caseInsensitive_success() {
         User user = new User();
         user.setUsername("john");
         user.setEmail("john@example.com");

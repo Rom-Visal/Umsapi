@@ -35,7 +35,7 @@ class ManagerControllerWebMvcTest {
     private UserDetailsServiceImpl userDetailsService;
 
     @Test
-    void getUser_returnsNotFoundContractWhenServiceThrowsUserNotFound() throws Exception {
+    void getUser_notFound_errorResponse() throws Exception {
         when(userService.getUser(99L))
                 .thenThrow(new UserNotFoundException("User not found with ID 99"));
 

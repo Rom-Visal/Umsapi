@@ -18,7 +18,7 @@ import static org.mockito.Mockito.when;
 class GlobalExceptionHandlerTest {
 
     @Test
-    void handleGlobalException_usesDetailedMessageInDevProfile() {
+    void handleGlobalException_devProfile_detailedMsg() {
         Environment environment = mock(Environment.class);
         when(environment.getActiveProfiles()).thenReturn(new String[]{"dev"});
         GlobalExceptionHandler handler = new GlobalExceptionHandler(environment);
@@ -35,7 +35,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleGlobalException_usesGenericMessageOutsideDevProfile() {
+    void handleGlobalException_otherProfile_genericMsg() {
         Environment environment = mock(Environment.class);
         when(environment.getActiveProfiles()).thenReturn(new String[]{"test"});
         GlobalExceptionHandler handler = new GlobalExceptionHandler(environment);

@@ -105,7 +105,7 @@ class AuthControllerWebMvcTest {
     }
 
     @Test
-    void registerUser_returnsBadRequestForInvalidPayload() throws Exception {
+    void register_invalidPayload_badRequest() throws Exception {
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -134,7 +134,7 @@ class AuthControllerWebMvcTest {
     }
 
     @Test
-    void login_returnsUnauthorizedContractWhenCredentialsAreInvalid() throws Exception {
+    void login_invalidCredentials_unauthorized() throws Exception {
         when(authService.login(any())).thenThrow(new BadCredentialsException("Bad credentials"));
 
         mockMvc.perform(post("/auth/login")

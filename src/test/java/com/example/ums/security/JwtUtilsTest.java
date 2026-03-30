@@ -14,7 +14,7 @@ class JwtUtilsTest {
     private static final String REFRESH_SECRET = "U2Vjb25kU2VjdXJlQmFzZTY0UmVmcmVzaEtleUZvclNwcmluZ0Jvb3QxMjM0NTY3ODkw";
 
     @Test
-    void accessAndRefreshTokens_haveDistinctTypesAndValidationRules() {
+    void tokens_distinctTypesAndValidation() {
         JwtUtils jwtUtils = configuredJwtUtils(ACCESS_SECRET, ACCESS_SECRET, 900000L);
         UserDetails user = User.withUsername("john").password("encoded").authorities("USER").build();
 
@@ -29,7 +29,7 @@ class JwtUtilsTest {
     }
 
     @Test
-    void expiredAccessToken_throwsExpiredJwtExceptionOnValidation() {
+    void expiredToken_throwsException() {
         JwtUtils jwtUtils = configuredJwtUtils(ACCESS_SECRET, REFRESH_SECRET, -1000L);
         UserDetails user = User.withUsername("john").password("encoded").authorities("USER").build();
         String accessToken = jwtUtils.generateAccessToken(user);
@@ -49,7 +49,7 @@ class JwtUtilsTest {
     }
 
     @Test
-    void refreshTokenCarriesExpectedSubjectAndExpiration() {
+    void refreshToken_carriesData() {
         JwtUtils jwtUtils = configuredJwtUtils(ACCESS_SECRET, REFRESH_SECRET, 900000L);
         UserDetails user = User.withUsername("john").password("encoded").authorities("USER").build();
 

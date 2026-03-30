@@ -66,7 +66,7 @@ class AuthTokenLifecycleIntegrationTest {
     }
 
     @Test
-    void refreshTokenCannotBeReusedAfterRotation() throws Exception {
+    void refreshToken_noReuseAfterRotation() throws Exception {
         MvcResult loginResult = mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

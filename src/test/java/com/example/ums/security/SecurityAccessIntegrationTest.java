@@ -36,34 +36,34 @@ class SecurityAccessIntegrationTest {
     private UserService userService;
 
     @Test
-    void publicAuthEndpoint_isAccessibleWithoutAuthentication() throws Exception {
+    void publicEndpoint_ok() throws Exception {
         mockMvc.perform(get("/auth/home"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Welcome to Spring Boot REST APIs"));
     }
 
     @Test
-    void protectedManagerEndpoint_requiresAuthentication() throws Exception {
+    void managerEndpoint_unauthorized() throws Exception {
         mockMvc.perform(get("/manager/user/all"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void protectedUserEndpoint_requiresAuthentication() throws Exception {
+    void userEndpoint_unauthorized() throws Exception {
         mockMvc.perform(get("/user/profile"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     @WithMockUser(username = "plain-user", roles = "USER")
-    void managerEndpoint_forbiddenForUserRole() throws Exception {
+    void managerEndpoint_forbiddenForUser() throws Exception {
         mockMvc.perform(get("/manager/user/all"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(username = "manager", roles = "MANAGER")
-    void managerEndpoint_allowsManagerRole() throws Exception {
+    void managerEndpoint_managerOk() throws Exception {
         Page<UserResponse> users = new PageImpl<>(List.of(
                 UserResponse.builder()
                         .id(10L)
@@ -84,7 +84,7 @@ class SecurityAccessIntegrationTest {
 
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
-    void managerEndpoint_allowsAdminRole() throws Exception {
+    void managerEndpoint_adminOk() throws Exception {
         when(userService.getAll(any(Pageable.class))).thenReturn(Page.empty());
 
         mockMvc.perform(get("/manager/user/all"))
@@ -94,14 +94,14 @@ class SecurityAccessIntegrationTest {
 
     @Test
     @WithMockUser(username = "manager", roles = "MANAGER")
-    void adminEndpoint_forbiddenForNonAdminRole() throws Exception {
+    void adminEndpoint_forbiddenForManager() throws Exception {
         mockMvc.perform(delete("/admin/delete-user/1"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
-    void adminEndpoint_allowsAdminRole() throws Exception {
+    void adminEndpoint_adminOk() throws Exception {
         doNothing().when(userService).deleteUser(1L);
 
         mockMvc.perform(delete("/admin/delete-user/1"))
@@ -113,7 +113,7 @@ class SecurityAccessIntegrationTest {
 
     @Test
     @WithMockUser(username = "Alice", roles = "USER")
-    void userProfileEndpoint_allowsUserRole() throws Exception {
+    void userProfile_userOk() throws Exception {
         UserResponse response = UserResponse.builder()
                 .id(1L)
                 .username("Alice")

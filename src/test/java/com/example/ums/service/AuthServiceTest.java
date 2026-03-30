@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.core.userdetails.User.withUsername;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -57,13 +58,12 @@ class AuthServiceTest {
     private AuthService authService;
 
     @Test
-    void login_returnsTokensAndPersistsRefreshTokenHash() {
+    void login_success() {
         LoginRequest request = new LoginRequest();
         request.setUsername("john");
         request.setPassword("Password@123");
 
-        UserDetails userDetails = org.springframework.security.core.userdetails.User
-                .withUsername("john")
+        UserDetails userDetails = withUsername("john")
                 .password("encoded")
                 .authorities("USER")
                 .build();
@@ -103,7 +103,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void refreshToken_throwsWhenJwtIsInvalid() {
+    void refreshToken_invalidJwt() {
         RefreshTokenRequest request = new RefreshTokenRequest();
         request.setRefreshToken("invalid");
         when(jwtUtils.validateRefreshToken("invalid")).thenReturn(false);
@@ -112,7 +112,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void logout_revokesTokenWhenPresent() throws Exception {
+    void logout_success() throws Exception {
         String rawToken = "refresh-token";
         RefreshTokenRequest request = new RefreshTokenRequest();
         request.setRefreshToken(rawToken);
@@ -129,7 +129,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void logout_doesNothingWhenTokenNotFound() throws Exception {
+    void logout_notFound() throws Exception {
         String rawToken = "refresh-token";
         RefreshTokenRequest request = new RefreshTokenRequest();
         request.setRefreshToken(rawToken);
@@ -141,7 +141,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void refreshToken_throwsWhenStoredTokenRevoked() throws Exception {
+    void refreshToken_revokedToken() throws Exception {
         String rawToken = "raw-token";
         RefreshTokenRequest request = new RefreshTokenRequest();
         request.setRefreshToken(rawToken);
@@ -166,7 +166,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void refreshToken_throwsWhenStoredTokenExpired() throws Exception {
+    void refreshToken_expiredToken() throws Exception {
         String rawToken = "raw-token";
         RefreshTokenRequest request = new RefreshTokenRequest();
         request.setRefreshToken(rawToken);
@@ -193,7 +193,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void refreshToken_throwsWhenSubjectMismatch() throws Exception {
+    void refreshToken_subjectMismatch() throws Exception {
         String rawToken = "raw-token";
         RefreshTokenRequest request = new RefreshTokenRequest();
         request.setRefreshToken(rawToken);
@@ -218,7 +218,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void refreshToken_rotatesTokenAndReturnsNewPair() throws Exception {
+    void refreshToken_success() throws Exception {
         String rawToken = "raw-token";
         String rotatedRefresh = "new-refresh-token";
         RefreshTokenRequest request = new RefreshTokenRequest();
@@ -234,8 +234,7 @@ class AuthServiceTest {
         stored.setExpiresAt(LocalDateTime.now().plusMinutes(10));
         stored.setTokenHash(hash(rawToken));
 
-        UserDetails userDetails = org.springframework.security.core.userdetails.User
-                .withUsername("john")
+        UserDetails userDetails = withUsername("john")
                 .password("encoded")
                 .authorities("USER")
                 .build();

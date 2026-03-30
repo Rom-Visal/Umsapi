@@ -53,7 +53,7 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
-    void registerUser_encodesPasswordAndAssignsDefaultRole() {
+    void registerUser_success() {
         RegistrationRequest request = RegistrationRequest.builder()
                 .username("john")
                 .email("john@example.com")
@@ -93,7 +93,7 @@ class UserServiceTest {
     }
 
     @Test
-    void registerUser_throwsWhenUsernameAlreadyExists() {
+    void registerUser_usernameExists() {
         RegistrationRequest request = RegistrationRequest.builder()
                 .username("john")
                 .email("john@example.com")
@@ -109,7 +109,7 @@ class UserServiceTest {
     }
 
     @Test
-    void updateUser_throwsDisabledExceptionWhenUserIsDisabled() {
+    void updateUser_disabledUser() {
         User existingUser = new User();
         existingUser.setEnabled(false);
 
@@ -120,7 +120,7 @@ class UserServiceTest {
     }
 
     @Test
-    void updateUserStatus_throwsWhenUserNotFound() {
+    void updateUserStatus_notFound() {
         when(userRepository.updateUserEnabledStatus("john", true)).thenReturn(0);
 
         assertThrows(UserNotFoundException.class, () -> userService.updateUserStatus("john", true));
@@ -136,14 +136,14 @@ class UserServiceTest {
     }
 
     @Test
-    void deleteUser_throwsWhenIdDoesNotExist() {
+    void deleteUser_notFound() {
         when(userRepository.existsById(99L)).thenReturn(false);
 
         assertThrows(UserNotFoundException.class, () -> userService.deleteUser(99L));
     }
 
     @Test
-    void getProfile_throwsWhenUsernameDoesNotExist() {
+    void getProfile_notFound() {
         when(userRepository.findByUsernameWithRoles("john")).thenReturn(Optional.empty());
 
         assertThrows(UsernameNotFoundException.class, () -> userService.getProfile("john"));
@@ -175,7 +175,7 @@ class UserServiceTest {
     }
 
     @Test
-    void updateUser_throwsWhenUserDoesNotExist() {
+    void updateUser_notFound() {
         when(userRepository.findByUsernameWithRoles("john")).thenReturn(Optional.empty());
 
         assertThrows(UserNotFoundException.class,
@@ -183,7 +183,7 @@ class UserServiceTest {
     }
 
     @Test
-    void registerUser_throwsWhenDefaultRoleMissing() {
+    void registerUser_roleMissing() {
         RegistrationRequest request = RegistrationRequest.builder()
                 .username("john")
                 .email("john@example.com")
@@ -200,7 +200,7 @@ class UserServiceTest {
     }
 
     @Test
-    void registerUser_throwsWhenEmailAlreadyExists() {
+    void registerUser_emailExists() {
         RegistrationRequest request = RegistrationRequest.builder()
                 .username("john")
                 .email("john@example.com")
@@ -216,7 +216,7 @@ class UserServiceTest {
     }
 
     @Test
-    void registerUserByAdmin_throwsWhenAnyRoleIsInvalid() {
+    void registerByAdmin_invalidRole() {
         AdminRegistrationRequest request = AdminRegistrationRequest.builder()
                 .username("john")
                 .email("john@example.com")
@@ -239,7 +239,7 @@ class UserServiceTest {
     }
 
     @Test
-    void registerUserByAdmin_usesDefaultRoleWhenRolesMissing() {
+    void registerByAdmin_defaultRole() {
         AdminRegistrationRequest request = AdminRegistrationRequest.builder()
                 .username("john")
                 .email("john@example.com")

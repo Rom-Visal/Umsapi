@@ -55,7 +55,7 @@ class RepositoryConstraintDataJpaTest {
     }
 
     @Test
-    void saveRefreshToken_throwsOnDuplicateTokenHash() {
+    void saveToken_duplicateHash_throws() {
         User user = new User();
         user.setUsername("john");
         user.setEmail("john@example.com");
