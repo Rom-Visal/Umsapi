@@ -102,9 +102,5 @@ Once the application is running, access the interactive Swagger UI at:
 #### API Preview
 ![img.png](Documentation.png)
 
-## 📜 License
-
-This project is licensed under the TODO: [Add License Name, e.g., MIT License] - see the [LICENSE](LICENSE) file for details. (Note: No LICENSE file found in root).
-
 ---
 Developed by [Rom Visal](https://github.com/Rom-Visal)
