@@ -11,7 +11,7 @@
     <groupId>com.example</groupId>
     <artifactId>ums</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>rolebase</name>
+    <name>ums</name>
     <description>UMS with Spring Boot</description>
     <url/>
     <licenses>

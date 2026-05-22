@@ -1,0 +1,28 @@
+spring:
+  # PostgreSQL config
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ums_db
+    password: 181035
+    username: postgres
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+
+    properties:
+      hibernate:
+        format_sql: true
+
+# Logging config
+logging:
+  level:
+    com.example.ums: DEBUG
+
+# JWT config
+jwt:
+  # Base64 encoded secret key (at least 256-bit for HS256)
+  secret: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWFuZC1sb25nLWVub3VnaC1zZWNyZXQta2V5LXdpdGgtYXQtbGVhc3QtMzItY2hhcmFjdGVycw==
+  expiration-ms: 3600000 # 1 hour
+  refresh-expiration-ms: 604800000 # 7 days
+  refresh-secret: U2Vjb25kU2VjdXJlQmFzZTY0UmVmcmVzaEtleUZvclNwcmluZ0Jvb3QxMjM0NTY3ODkw

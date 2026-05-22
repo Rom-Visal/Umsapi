@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: ums
+  
+  profiles:
+    active: dev
+  
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false

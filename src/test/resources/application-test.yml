@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:rolebase;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ''
+  jackson:
+    date-format: 'yyyy-MM-dd HH:mm:ss'
+    serialization:
+      write-dates-as-timestamps: false
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+jwt:
+  secret: VGhpc0lzQVNlY3VyZUJhc2U2NFNlY3JldEtleUZvckpXVFRva2VuMTIzNDU2Nzg5MA==
+  refresh-secret: U2Vjb25kU2VjdXJlQmFzZTY0UmVmcmVzaEtleUZvclNwcmluZ0Jvb3QxMjM0NTY3ODkw
+  expiration-ms: 900000
+  refresh-expiration-ms: 604800000

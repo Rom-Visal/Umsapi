@@ -1,5 +1,6 @@
 package com.example.ums.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
@@ -10,7 +11,8 @@ import java.time.LocalDateTime;
 @Builder
 public class ErrorResponse {
 
-    @Schema(description = "Timestamp", example = "2024-01-09T10:30:00")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
+    @Schema(description = "Timestamp", example = "2024-01-09 10:30:00")
     private LocalDateTime timestamp;
 
     @Schema(description = "Error type", example = "Validation Error")
