@@ -19,15 +19,24 @@ import java.util.List;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class SecurityAccessIntegrationTest {
+
+    private static final String PUBLIC_HOME = "/auth/home";
+    private static final String MANAGER_USERS = "/manager/user/all";
+    private static final String USER_PROFILE = "/user/profile";
+    private static final String ADMIN_DELETE_USER = "/admin/delete-user/1";
 
     @Autowired
     private MockMvc mockMvc;
@@ -36,75 +45,80 @@ class SecurityAccessIntegrationTest {
     private UserService userService;
 
     @Test
-    void publicEndpoint_ok() throws Exception {
-        mockMvc.perform(get("/auth/home"))
+    void publicEndpoint_returnsWelcomeMessage() throws Exception {
+        mockMvc.perform(get(PUBLIC_HOME))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Welcome to Spring Boot REST APIs"));
     }
 
     @Test
-    void managerEndpoint_unauthorized() throws Exception {
-        mockMvc.perform(get("/manager/user/all"))
+    void managerEndpoint_returnsUnauthorizedWhenAnonymous() throws Exception {
+        mockMvc.perform(get(MANAGER_USERS))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void userEndpoint_unauthorized() throws Exception {
-        mockMvc.perform(get("/user/profile"))
+    void userEndpoint_returnsUnauthorizedWhenAnonymous() throws Exception {
+        mockMvc.perform(get(USER_PROFILE))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void adminDelete_returnsUnauthorizedWhenAnonymous() throws Exception {
+        mockMvc.perform(delete(ADMIN_DELETE_USER))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     @WithMockUser(username = "plain-user", roles = "USER")
-    void managerEndpoint_forbiddenForUser() throws Exception {
-        mockMvc.perform(get("/manager/user/all"))
+    void managerEndpoint_returnsForbiddenForUserRole() throws Exception {
+        mockMvc.perform(get(MANAGER_USERS))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(username = "manager", roles = "MANAGER")
-    void managerEndpoint_managerOk() throws Exception {
-        Page<UserResponse> users = new PageImpl<>(List.of(
-                UserResponse.builder()
-                        .id(10L)
-                        .username("alpha")
-                        .email("alpha@example.com")
-                        .roles(Set.of("USER"))
-                        .enabled(true)
-                        .build()
-        ));
+    void managerEndpoint_returnsUsersForManagerRole() throws Exception {
+        Page<UserResponse> users = new PageImpl<>(List.of(sampleUserResponse(10L, "alpha", "alpha@example.com", "USER")));
         when(userService.getAll(any(Pageable.class))).thenReturn(users);
 
-        mockMvc.perform(get("/manager/user/all"))
+        mockMvc.perform(get(MANAGER_USERS))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].username").value("alpha"));
+                .andExpect(jsonPath("$.content[0].id").value(10L))
+                .andExpect(jsonPath("$.content[0].username").value("alpha"))
+                .andExpect(jsonPath("$.content[0].email").value("alpha@example.com"))
+                .andExpect(jsonPath("$.content[0].roles[0]").value("USER"))
+                .andExpect(jsonPath("$.content[0].enabled").value(true));
 
         verify(userService).getAll(any(Pageable.class));
     }
 
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
-    void managerEndpoint_adminOk() throws Exception {
+    void managerEndpoint_returnsOkForAdminRole() throws Exception {
         when(userService.getAll(any(Pageable.class))).thenReturn(Page.empty());
 
-        mockMvc.perform(get("/manager/user/all"))
+        mockMvc.perform(get(MANAGER_USERS))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content").isArray());
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(0));
+
+        verify(userService).getAll(any(Pageable.class));
     }
 
     @Test
     @WithMockUser(username = "manager", roles = "MANAGER")
-    void adminEndpoint_forbiddenForManager() throws Exception {
-        mockMvc.perform(delete("/admin/delete-user/1"))
+    void adminEndpoint_returnsForbiddenForManagerRole() throws Exception {
+        mockMvc.perform(delete(ADMIN_DELETE_USER))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
-    void adminEndpoint_adminOk() throws Exception {
+    void adminEndpoint_deletesUserForAdminRole() throws Exception {
         doNothing().when(userService).deleteUser(1L);
 
-        mockMvc.perform(delete("/admin/delete-user/1"))
+        mockMvc.perform(delete(ADMIN_DELETE_USER))
                 .andExpect(status().isOk())
                 .andExpect(content().string("User with ID 1 deleted successfully."));
 
@@ -113,21 +127,28 @@ class SecurityAccessIntegrationTest {
 
     @Test
     @WithMockUser(username = "Alice", roles = "USER")
-    void userProfile_userOk() throws Exception {
-        UserResponse response = UserResponse.builder()
-                .id(1L)
-                .username("Alice")
-                .email("alice@example.com")
-                .roles(Set.of("USER"))
-                .enabled(true)
-                .build();
+    void userProfile_returnsProfileForUserRole() throws Exception {
+        UserResponse response = sampleUserResponse(1L, "Alice", "alice@example.com", "USER");
         when(userService.getProfile("Alice")).thenReturn(response);
 
-        mockMvc.perform(get("/user/profile").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get(USER_PROFILE).accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.username").value("Alice"))
-                .andExpect(jsonPath("$.email").value("alice@example.com"));
+                .andExpect(jsonPath("$.email").value("alice@example.com"))
+                .andExpect(jsonPath("$.roles[0]").value("USER"))
+                .andExpect(jsonPath("$.enabled").value(true));
 
         verify(userService).getProfile("Alice");
+    }
+
+    private static UserResponse sampleUserResponse(Long id, String username, String email, String role) {
+        return UserResponse.builder()
+                .id(id)
+                .username(username)
+                .email(email)
+                .roles(Set.of(role))
+                .enabled(true)
+                .build();
     }
 }
