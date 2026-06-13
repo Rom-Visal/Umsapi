@@ -12,6 +12,7 @@ import com.example.ums.mapper.UpdateUserRequestMapper;
 import com.example.ums.mapper.UserMapper;
 import com.example.ums.repository.RoleRepository;
 import com.example.ums.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -30,6 +31,17 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
+
+    private static final String TEST_USERNAME = "john";
+    private static final String TEST_EMAIL = "john@example.com";
+    private static final String TEST_PASSWORD = "Password@123";
+    private static final String TEST_NEW_PASSWORD = "NewPassword@123";
+    private static final String TEST_ENCODED_PASSWORD = "encoded";
+    private static final String TEST_ENCODED_NEW_PASSWORD = "encoded-new-password";
+    private static final String ROLE_USER = "USER";
+    private static final String ROLE_MISSING = "MISSING";
+    private static final Long TEST_USER_ID = 1L;
+    private static final Long UNKNOWN_USER_ID = 99L;
 
     @Mock
     private UserRepository userRepository;
@@ -52,217 +64,237 @@ class UserServiceTest {
     @InjectMocks
     private UserService userService;
 
+    private RegistrationRequest registrationRequest;
+
+    @BeforeEach
+    void setUp() {
+        registrationRequest = createRegistrationRequest();
+    }
+
     @Test
     void registerUser_success() {
-        RegistrationRequest request = RegistrationRequest.builder()
-                .username("john")
-                .email("john@example.com")
-                .password("Password@123")
-                .build();
+        // Arrange
+        Role userRole = createRole(ROLE_USER);
+        User mappedUser = createUser();
+        UserResponse expectedResponse = createUserResponse(TEST_USER_ID, Set.of(ROLE_USER), true);
 
-        Role userRole = new Role();
-        userRole.setName("USER");
-
-        User mappedUser = new User();
-        mappedUser.setUsername("john");
-        mappedUser.setEmail("john@example.com");
-
-        UserResponse expectedResponse = UserResponse.builder()
-                .id(1L)
-                .username("john")
-                .email("john@example.com")
-                .roles(Set.of("USER"))
-                .enabled(true)
-                .build();
-
-        when(userRepository.existsByUsernameIgnoreCase("john")).thenReturn(false);
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
-        when(userMapper.toEntity(request)).thenReturn(mappedUser);
-        when(passwordEncoder.encode("Password@123")).thenReturn("encoded");
-        when(roleRepository.findByName("USER")).thenReturn(Optional.of(userRole));
+        when(userRepository.existsByUsernameIgnoreCase(TEST_USERNAME)).thenReturn(false);
+        when(userRepository.existsByEmail(TEST_EMAIL)).thenReturn(false);
+        when(userMapper.toEntity(registrationRequest)).thenReturn(mappedUser);
+        when(passwordEncoder.encode(TEST_PASSWORD)).thenReturn(TEST_ENCODED_PASSWORD);
+        when(roleRepository.findByName(ROLE_USER)).thenReturn(Optional.of(userRole));
         when(userMapper.toResponse(mappedUser)).thenReturn(expectedResponse);
 
-        UserResponse response = userService.registerUser(request);
+        // Act
+        UserResponse response = userService.registerUser(registrationRequest);
 
+        // Assert
         assertSame(expectedResponse, response);
-        assertEquals("encoded", mappedUser.getPassword());
-        assertNotNull(mappedUser.getRoles());
-        assertEquals(1, mappedUser.getRoles().size());
-
-        verify(userRepository).save(mappedUser);
+        verify(passwordEncoder).encode(TEST_PASSWORD);
+        verify(userRepository).save(argThat(user ->
+                TEST_USERNAME.equals(user.getUsername())
+                        && TEST_EMAIL.equals(user.getEmail())
+                        && TEST_ENCODED_PASSWORD.equals(user.getPassword())
+                        && user.getRoles() != null
+                        && user.getRoles().size() == 1
+                        && user.getRoles().stream().anyMatch(role -> ROLE_USER.equals(role.getName()))
+        ));
     }
 
     @Test
     void registerUser_usernameExists() {
-        RegistrationRequest request = RegistrationRequest.builder()
-                .username("john")
-                .email("john@example.com")
-                .password("Password@123")
-                .build();
-
-        when(userRepository.existsByUsernameIgnoreCase("john")).thenReturn(true);
+        when(userRepository.existsByUsernameIgnoreCase(TEST_USERNAME)).thenReturn(true);
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> userService.registerUser(request));
+                () -> userService.registerUser(registrationRequest));
 
         assertEquals("Username is already taken", exception.getMessage());
     }
 
     @Test
     void updateUser_disabledUser() {
-        User existingUser = new User();
+        User existingUser = createUser();
         existingUser.setEnabled(false);
 
-        when(userRepository.findByUsernameWithRoles("john")).thenReturn(Optional.of(existingUser));
+        when(userRepository.findByUsernameWithRoles(TEST_USERNAME)).thenReturn(Optional.of(existingUser));
 
         assertThrows(DisabledException.class,
-                () -> userService.updateUser("john", UpdateUserRequest.builder().build()));
+                () -> userService.updateUser(TEST_USERNAME, UpdateUserRequest.builder().build()));
     }
 
     @Test
     void updateUserStatus_notFound() {
-        when(userRepository.updateUserEnabledStatus("john", true)).thenReturn(0);
+        when(userRepository.updateUserEnabledStatus(TEST_USERNAME, true)).thenReturn(0);
 
-        assertThrows(UserNotFoundException.class, () -> userService.updateUserStatus("john", true));
+        assertThrows(UserNotFoundException.class, () -> userService.updateUserStatus(TEST_USERNAME, true));
     }
 
     @Test
     void updateUserStatus_updatesEnabledFlag() {
-        when(userRepository.updateUserEnabledStatus("john", true)).thenReturn(1);
+        when(userRepository.updateUserEnabledStatus(TEST_USERNAME, true)).thenReturn(1);
 
-        userService.updateUserStatus("john", true);
+        userService.updateUserStatus(TEST_USERNAME, true);
 
-        verify(userRepository).updateUserEnabledStatus("john", true);
+        verify(userRepository).updateUserEnabledStatus(TEST_USERNAME, true);
     }
 
     @Test
     void deleteUser_notFound() {
-        when(userRepository.existsById(99L)).thenReturn(false);
+        when(userRepository.existsById(UNKNOWN_USER_ID)).thenReturn(false);
 
-        assertThrows(UserNotFoundException.class, () -> userService.deleteUser(99L));
+        assertThrows(UserNotFoundException.class, () -> userService.deleteUser(UNKNOWN_USER_ID));
     }
 
     @Test
     void getProfile_notFound() {
-        when(userRepository.findByUsernameWithRoles("john")).thenReturn(Optional.empty());
+        when(userRepository.findByUsernameWithRoles(TEST_USERNAME)).thenReturn(Optional.empty());
 
-        assertThrows(UsernameNotFoundException.class, () -> userService.getProfile("john"));
+        assertThrows(UsernameNotFoundException.class, () -> userService.getProfile(TEST_USERNAME));
     }
 
     @Test
     void updateUser_encodesNewPasswordWhenProvided() {
-        User existingUser = new User();
-        existingUser.setEnabled(true);
-
+        // Arrange
+        User existingUser = createUser();
         UpdateUserRequest request = UpdateUserRequest.builder()
-                .password("NewPassword@123")
+                .password(TEST_NEW_PASSWORD)
                 .build();
+        UserResponse beforeUpdate = createUserResponse(null, Set.of(ROLE_USER), true);
+        UserResponse afterUpdate = createUserResponse(null, Set.of(ROLE_USER), true);
 
-        UserResponse beforeUpdate = UserResponse.builder().username("john").build();
-        UserResponse afterUpdate = UserResponse.builder().username("john").build();
-
-        when(userRepository.findByUsernameWithRoles("john")).thenReturn(Optional.of(existingUser));
-        when(passwordEncoder.encode("NewPassword@123")).thenReturn("encoded-new-password");
+        when(userRepository.findByUsernameWithRoles(TEST_USERNAME)).thenReturn(Optional.of(existingUser));
+        when(passwordEncoder.encode(TEST_NEW_PASSWORD)).thenReturn(TEST_ENCODED_NEW_PASSWORD);
         when(userMapper.toResponse(existingUser)).thenReturn(beforeUpdate, afterUpdate);
         when(userRepository.save(existingUser)).thenReturn(existingUser);
 
-        userService.updateUser("john", request);
+        // Act
+        userService.updateUser(TEST_USERNAME, request);
 
+        // Assert
         verify(updateMapper).updateUserFromRequest(request, existingUser);
-        assertEquals("encoded-new-password", existingUser.getPassword());
-        verify(userRepository).save(existingUser);
+        verify(passwordEncoder).encode(TEST_NEW_PASSWORD);
+        verify(userRepository).save(argThat(user -> TEST_ENCODED_NEW_PASSWORD.equals(user.getPassword())));
         verify(userMapper, times(2)).toResponse(existingUser);
     }
 
     @Test
     void updateUser_notFound() {
-        when(userRepository.findByUsernameWithRoles("john")).thenReturn(Optional.empty());
+        when(userRepository.findByUsernameWithRoles(TEST_USERNAME)).thenReturn(Optional.empty());
 
         assertThrows(UserNotFoundException.class,
-                () -> userService.updateUser("john", UpdateUserRequest.builder().build()));
+                () -> userService.updateUser(TEST_USERNAME, UpdateUserRequest.builder().build()));
     }
 
     @Test
     void registerUser_roleMissing() {
-        RegistrationRequest request = RegistrationRequest.builder()
-                .username("john")
-                .email("john@example.com")
-                .password("Password@123")
-                .build();
-
-        when(userRepository.existsByUsernameIgnoreCase("john")).thenReturn(false);
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
-        when(userMapper.toEntity(request)).thenReturn(new User());
+        when(userRepository.existsByUsernameIgnoreCase(TEST_USERNAME)).thenReturn(false);
+        when(userRepository.existsByEmail(TEST_EMAIL)).thenReturn(false);
+        when(userMapper.toEntity(registrationRequest)).thenReturn(new User());
         when(passwordEncoder.encode(any())).thenReturn("encoded");
-        when(roleRepository.findByName("USER")).thenReturn(Optional.empty());
+        when(roleRepository.findByName(ROLE_USER)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalStateException.class, () -> userService.registerUser(request));
+        assertThrows(IllegalStateException.class, () -> userService.registerUser(registrationRequest));
     }
 
     @Test
     void registerUser_emailExists() {
-        RegistrationRequest request = RegistrationRequest.builder()
-                .username("john")
-                .email("john@example.com")
-                .password("Password@123")
-                .build();
-
-        when(userRepository.existsByUsernameIgnoreCase("john")).thenReturn(false);
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(true);
+        when(userRepository.existsByUsernameIgnoreCase(TEST_USERNAME)).thenReturn(false);
+        when(userRepository.existsByEmail(TEST_EMAIL)).thenReturn(true);
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> userService.registerUser(request));
+                () -> userService.registerUser(registrationRequest));
         assertEquals("Email is already registered", exception.getMessage());
     }
 
     @Test
     void registerByAdmin_invalidRole() {
-        AdminRegistrationRequest request = AdminRegistrationRequest.builder()
-                .username("john")
-                .email("john@example.com")
-                .password("Password@123")
-                .roles(Set.of("USER", "MISSING"))
-                .build();
+        // Arrange
+        AdminRegistrationRequest request = createAdminRegistrationRequest(Set.of(ROLE_USER, ROLE_MISSING));
+        Role userRole = createRole(ROLE_USER);
 
-        Role userRole = new Role();
-        userRole.setName("USER");
-
-        when(userRepository.existsByUsernameIgnoreCase("john")).thenReturn(false);
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
-        when(adminMapper.toEntity(request)).thenReturn(new User());
-        when(passwordEncoder.encode("Password@123")).thenReturn("encoded");
+        when(userRepository.existsByUsernameIgnoreCase(TEST_USERNAME)).thenReturn(false);
+        when(userRepository.existsByEmail(TEST_EMAIL)).thenReturn(false);
+        when(adminMapper.toEntity(request)).thenReturn(createUser());
+        when(passwordEncoder.encode(TEST_PASSWORD)).thenReturn(TEST_ENCODED_PASSWORD);
         when(roleRepository.findAllByNameIn(request.getRoles())).thenReturn(Set.of(userRole));
 
+        // Act
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> userService.registerUserByAdmin(request));
+
+        // Assert
         assertTrue(exception.getMessage().contains("The following roles do not exist"));
+        assertTrue(exception.getMessage().contains(ROLE_MISSING));
+        verify(roleRepository).findAllByNameIn(argThat(roles ->
+                roles.size() == 2 && roles.contains(ROLE_USER) && roles.contains(ROLE_MISSING)));
     }
 
     @Test
     void registerByAdmin_defaultRole() {
-        AdminRegistrationRequest request = AdminRegistrationRequest.builder()
-                .username("john")
-                .email("john@example.com")
-                .password("Password@123")
-                .roles(null)
-                .build();
+        // Arrange
+        AdminRegistrationRequest request = createAdminRegistrationRequest(null);
+        Role defaultRole = createRole(ROLE_USER);
+        User mappedUser = createUser();
+        UserResponse expected = createUserResponse(null, Set.of(ROLE_USER), true);
 
-        Role defaultRole = new Role();
-        defaultRole.setName("USER");
-        User mappedUser = new User();
-        UserResponse expected = UserResponse.builder().username("john").build();
-
-        when(userRepository.existsByUsernameIgnoreCase("john")).thenReturn(false);
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
+        when(userRepository.existsByUsernameIgnoreCase(TEST_USERNAME)).thenReturn(false);
+        when(userRepository.existsByEmail(TEST_EMAIL)).thenReturn(false);
         when(adminMapper.toEntity(request)).thenReturn(mappedUser);
-        when(passwordEncoder.encode("Password@123")).thenReturn("encoded");
-        when(roleRepository.findByName("USER")).thenReturn(Optional.of(defaultRole));
+        when(passwordEncoder.encode(TEST_PASSWORD)).thenReturn(TEST_ENCODED_PASSWORD);
+        when(roleRepository.findByName(ROLE_USER)).thenReturn(Optional.of(defaultRole));
         when(userMapper.toResponse(mappedUser)).thenReturn(expected);
 
+        // Act
         UserResponse actual = userService.registerUserByAdmin(request);
 
+        // Assert
         assertEquals(expected, actual);
-        assertEquals(1, mappedUser.getRoles().size());
-        verify(userRepository).save(mappedUser);
+        verify(userRepository).save(argThat(user ->
+                TEST_ENCODED_PASSWORD.equals(user.getPassword())
+                        && user.getRoles() != null
+                        && user.getRoles().size() == 1
+                        && user.getRoles().stream().anyMatch(role -> ROLE_USER.equals(role.getName()))
+        ));
+    }
+
+    private RegistrationRequest createRegistrationRequest() {
+        return RegistrationRequest.builder()
+                .username(TEST_USERNAME)
+                .email(TEST_EMAIL)
+                .password(TEST_PASSWORD)
+                .build();
+    }
+
+    private AdminRegistrationRequest createAdminRegistrationRequest(Set<String> roles) {
+        return AdminRegistrationRequest.builder()
+                .username(TEST_USERNAME)
+                .email(TEST_EMAIL)
+                .password(TEST_PASSWORD)
+                .roles(roles)
+                .build();
+    }
+
+    private User createUser() {
+        User user = new User();
+        user.setUsername(TEST_USERNAME);
+        user.setEmail(TEST_EMAIL);
+        user.setEnabled(true);
+        return user;
+    }
+
+    private Role createRole(String roleName) {
+        Role role = new Role();
+        role.setName(roleName);
+        return role;
+    }
+
+    private UserResponse createUserResponse(Long id, Set<String> roles, boolean enabled) {
+        return UserResponse.builder()
+                .id(id)
+                .username(TEST_USERNAME)
+                .email(TEST_EMAIL)
+                .roles(roles)
+                .enabled(enabled)
+                .build();
     }
 }
