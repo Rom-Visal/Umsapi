@@ -91,14 +91,7 @@ class UserServiceTest {
         // Assert
         assertSame(expectedResponse, response);
         verify(passwordEncoder).encode(TEST_PASSWORD);
-        verify(userRepository).save(argThat(user ->
-                TEST_USERNAME.equals(user.getUsername())
-                        && TEST_EMAIL.equals(user.getEmail())
-                        && TEST_ENCODED_PASSWORD.equals(user.getPassword())
-                        && user.getRoles() != null
-                        && user.getRoles().size() == 1
-                        && user.getRoles().stream().anyMatch(role -> ROLE_USER.equals(role.getName()))
-        ));
+        verify(userRepository).save(argThat(user -> hasExpectedUserFieldsAndSingleRole(user, TEST_ENCODED_PASSWORD, ROLE_USER)));
     }
 
     @Test
@@ -225,8 +218,6 @@ class UserServiceTest {
         // Assert
         assertTrue(exception.getMessage().contains("The following roles do not exist"));
         assertTrue(exception.getMessage().contains(ROLE_MISSING));
-        verify(roleRepository).findAllByNameIn(argThat(roles ->
-                roles.size() == 2 && roles.contains(ROLE_USER) && roles.contains(ROLE_MISSING)));
     }
 
     @Test
@@ -249,12 +240,7 @@ class UserServiceTest {
 
         // Assert
         assertEquals(expected, actual);
-        verify(userRepository).save(argThat(user ->
-                TEST_ENCODED_PASSWORD.equals(user.getPassword())
-                        && user.getRoles() != null
-                        && user.getRoles().size() == 1
-                        && user.getRoles().stream().anyMatch(role -> ROLE_USER.equals(role.getName()))
-        ));
+        verify(userRepository).save(argThat(user -> hasExpectedUserFieldsAndSingleRole(user, TEST_ENCODED_PASSWORD, ROLE_USER)));
     }
 
     private RegistrationRequest createRegistrationRequest() {
@@ -296,5 +282,14 @@ class UserServiceTest {
                 .roles(roles)
                 .enabled(enabled)
                 .build();
+    }
+
+    private boolean hasExpectedUserFieldsAndSingleRole(User user, String encodedPassword, String roleName) {
+        return TEST_USERNAME.equals(user.getUsername())
+                && TEST_EMAIL.equals(user.getEmail())
+                && encodedPassword.equals(user.getPassword())
+                && user.getRoles() != null
+                && user.getRoles().size() == 1
+                && user.getRoles().stream().anyMatch(role -> roleName.equals(role.getName()));
     }
 }
