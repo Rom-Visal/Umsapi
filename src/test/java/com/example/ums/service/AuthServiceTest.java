@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.HexFormat;
 import java.util.List;
@@ -38,6 +39,11 @@ import static org.springframework.security.core.userdetails.User.withUsername;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
+
+    private static final long ACCESS_TOKEN_EXPIRATION_MS = 900000L;
+    private static final long REFRESH_TOKEN_EXPIRATION_MS = 604800000L;
+    private static final Instant FIXED_EXPIRES_AT = Instant.parse("2026-03-10T10:15:30Z");
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 3, 10, 10, 15, 30);
 
     @Mock
     private AuthenticationManager authenticationManager;
@@ -58,69 +64,63 @@ class AuthServiceTest {
     private AuthService authService;
 
     @Test
-    void login_success() {
-        LoginRequest request = new LoginRequest();
-        request.setUsername("john");
-        request.setPassword("Password@123");
-
-        UserDetails userDetails = withUsername("john")
-                .password("encoded")
-                .authorities("USER")
-                .build();
-
+    void login_shouldReturnTokensAndPersistRefreshToken() {
+        LoginRequest request = loginRequest("john", "Password@123");
+        UserDetails userDetails = userDetails("john");
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 userDetails, null, userDetails.getAuthorities());
-
-        User user = new User();
-        user.setId(10L);
-        user.setUsername("john");
+        User user = user(10L, "john");
 
         when(authenticationManager.authenticate(any())).thenReturn(authentication);
         when(userRepository.findByUsernameIgnoreCase("john")).thenReturn(Optional.of(user));
         when(jwtUtils.generateAccessToken(userDetails)).thenReturn("access-token");
         when(jwtUtils.generateRefreshToken(userDetails)).thenReturn("refresh-token");
-        when(jwtUtils.getAccessTokenExpirationMs()).thenReturn(900000L);
-        when(jwtUtils.getRefreshTokenExpirationMs()).thenReturn(604800000L);
-        when(jwtUtils.getRefreshTokenExpiration("refresh-token"))
-                .thenReturn(Date.from(Instant.parse("2026-03-10T10:15:30Z")));
+        when(jwtUtils.getAccessTokenExpirationMs()).thenReturn(ACCESS_TOKEN_EXPIRATION_MS);
+        when(jwtUtils.getRefreshTokenExpirationMs()).thenReturn(REFRESH_TOKEN_EXPIRATION_MS);
+        when(jwtUtils.getRefreshTokenExpiration("refresh-token")).thenReturn(Date.from(FIXED_EXPIRES_AT));
 
         AuthResponse response = authService.login(request);
 
-        assertEquals("access-token", response.getAccessToken());
-        assertEquals("refresh-token", response.getRefreshToken());
-        assertEquals("Bearer", response.getTokenType());
-        assertEquals(900000L, response.getAccessTokenExpiresIn());
-        assertEquals(604800000L, response.getRefreshTokenExpiresIn());
+        assertAll(
+                () -> assertEquals("access-token", response.getAccessToken()),
+                () -> assertEquals("refresh-token", response.getRefreshToken()),
+                () -> assertEquals("Bearer", response.getTokenType()),
+                () -> assertEquals(ACCESS_TOKEN_EXPIRATION_MS, response.getAccessTokenExpiresIn()),
+                () -> assertEquals(REFRESH_TOKEN_EXPIRATION_MS, response.getRefreshTokenExpiresIn())
+        );
 
-        verify(refreshTokenRepository).revokeAllActiveTokensByUserId(any(), any());
+        verify(authenticationManager).authenticate(any());
+        verify(userRepository).findByUsernameIgnoreCase("john");
+        verify(refreshTokenRepository).revokeAllActiveTokensByUserId(eq(10L), any());
+
         ArgumentCaptor<RefreshToken> tokenCaptor = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokenRepository).save(tokenCaptor.capture());
 
         RefreshToken savedToken = tokenCaptor.getValue();
-        assertEquals(user, savedToken.getUser());
-        assertFalse(savedToken.isRevoked());
-        assertNotNull(savedToken.getExpiresAt());
+        assertAll(
+                () -> assertEquals(user, savedToken.getUser()),
+                () -> assertFalse(savedToken.isRevoked()),
+                () -> assertNotNull(savedToken.getExpiresAt())
+        );
     }
 
     @Test
-    void refreshToken_invalidJwt() {
-        RefreshTokenRequest request = new RefreshTokenRequest();
-        request.setRefreshToken("invalid");
+    void refreshToken_shouldRejectInvalidJwt() {
+        RefreshTokenRequest request = refreshTokenRequest("invalid");
         when(jwtUtils.validateRefreshToken("invalid")).thenReturn(false);
 
         assertThrows(BadCredentialsException.class, () -> authService.refreshToken(request));
     }
 
     @Test
-    void logout_success() throws Exception {
+    void logout_shouldRevokeStoredToken() throws Exception {
         String rawToken = "refresh-token";
-        RefreshTokenRequest request = new RefreshTokenRequest();
-        request.setRefreshToken(rawToken);
-
+        String tokenHash = hash(rawToken);
+        RefreshTokenRequest request = refreshTokenRequest(rawToken);
         RefreshToken token = new RefreshToken();
         token.setRevoked(false);
 
-        when(refreshTokenRepository.findByTokenHash(hash(rawToken))).thenReturn(Optional.of(token));
+        when(refreshTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(token));
 
         authService.logout(request);
 
@@ -129,11 +129,12 @@ class AuthServiceTest {
     }
 
     @Test
-    void logout_notFound() throws Exception {
+    void logout_shouldIgnoreMissingToken() throws Exception {
         String rawToken = "refresh-token";
-        RefreshTokenRequest request = new RefreshTokenRequest();
-        request.setRefreshToken(rawToken);
-        when(refreshTokenRepository.findByTokenHash(hash(rawToken))).thenReturn(Optional.empty());
+        String tokenHash = hash(rawToken);
+        RefreshTokenRequest request = refreshTokenRequest(rawToken);
+
+        when(refreshTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.empty());
 
         authService.logout(request);
 
@@ -141,132 +142,141 @@ class AuthServiceTest {
     }
 
     @Test
-    void refreshToken_revokedToken() throws Exception {
+    void refreshToken_shouldDetectReusedToken() throws Exception {
         String rawToken = "raw-token";
-        RefreshTokenRequest request = new RefreshTokenRequest();
-        request.setRefreshToken(rawToken);
-
-        User user = new User();
-        user.setId(99L);
-        user.setUsername("john");
-
-        RefreshToken stored = new RefreshToken();
-        stored.setUser(user);
-        stored.setRevoked(true);
-        stored.setExpiresAt(LocalDateTime.now().plusMinutes(10));
-        stored.setTokenHash(hash(rawToken));
+        String tokenHash = hash(rawToken);
+        RefreshTokenRequest request = refreshTokenRequest(rawToken);
+        User user = user(99L, "john");
+        RefreshToken stored = refreshToken(user, true, FIXED_NOW.plusMinutes(10), tokenHash);
 
         when(jwtUtils.validateRefreshToken(rawToken)).thenReturn(true);
-        when(refreshTokenRepository.findByTokenHash(hash(rawToken))).thenReturn(Optional.of(stored));
+        when(refreshTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(stored));
 
         BadCredentialsException exception = assertThrows(BadCredentialsException.class,
                 () -> authService.refreshToken(request));
+
         assertEquals("Refresh token reuse detected, please login again", exception.getMessage());
         verify(refreshTokenRepository).revokeAllActiveTokensByUserId(eq(99L), any());
     }
 
     @Test
-    void refreshToken_expiredToken() throws Exception {
+    void refreshToken_shouldRejectExpiredToken() throws Exception {
         String rawToken = "raw-token";
-        RefreshTokenRequest request = new RefreshTokenRequest();
-        request.setRefreshToken(rawToken);
-
-        User user = new User();
-        user.setId(99L);
-        user.setUsername("john");
-
-        RefreshToken stored = new RefreshToken();
-        stored.setUser(user);
-        stored.setRevoked(false);
-        stored.setExpiresAt(LocalDateTime.now().minusMinutes(1));
-        stored.setTokenHash(hash(rawToken));
+        String tokenHash = hash(rawToken);
+        RefreshTokenRequest request = refreshTokenRequest(rawToken);
+        User user = user(99L, "john");
+        RefreshToken stored = refreshToken(user, false, FIXED_NOW.minusMinutes(1), tokenHash);
 
         when(jwtUtils.validateRefreshToken(rawToken)).thenReturn(true);
-        when(refreshTokenRepository.findByTokenHash(hash(rawToken))).thenReturn(Optional.of(stored));
+        when(refreshTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(stored));
 
         CredentialsExpiredException exception = assertThrows(CredentialsExpiredException.class,
                 () -> authService.refreshToken(request));
+
         assertEquals("Refresh token expired, please login again", exception.getMessage());
-        assertTrue(stored.isRevoked());
-        assertNotNull(stored.getRevokedAt());
+        assertAll(
+                () -> assertTrue(stored.isRevoked()),
+                () -> assertNotNull(stored.getRevokedAt())
+        );
         verify(refreshTokenRepository).save(stored);
     }
 
     @Test
-    void refreshToken_subjectMismatch() throws Exception {
+    void refreshToken_shouldRejectSubjectMismatch() throws Exception {
         String rawToken = "raw-token";
-        RefreshTokenRequest request = new RefreshTokenRequest();
-        request.setRefreshToken(rawToken);
-
-        User user = new User();
-        user.setId(99L);
-        user.setUsername("john");
-
-        RefreshToken stored = new RefreshToken();
-        stored.setUser(user);
-        stored.setRevoked(false);
-        stored.setExpiresAt(LocalDateTime.now().plusMinutes(10));
-        stored.setTokenHash(hash(rawToken));
+        String tokenHash = hash(rawToken);
+        RefreshTokenRequest request = refreshTokenRequest(rawToken);
+        User user = user(99L, "john");
+        RefreshToken stored = refreshToken(user, false, FIXED_NOW.plusMinutes(10), tokenHash);
 
         when(jwtUtils.validateRefreshToken(rawToken)).thenReturn(true);
-        when(refreshTokenRepository.findByTokenHash(hash(rawToken))).thenReturn(Optional.of(stored));
+        when(refreshTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(stored));
         when(jwtUtils.getUsernameFromRefreshToken(rawToken)).thenReturn("mismatch-user");
 
         BadCredentialsException exception = assertThrows(BadCredentialsException.class,
                 () -> authService.refreshToken(request));
+
         assertEquals("Invalid refresh token subject", exception.getMessage());
     }
 
     @Test
-    void refreshToken_success() throws Exception {
+    void refreshToken_shouldRotateTokenSuccessfully() throws Exception {
         String rawToken = "raw-token";
+        String tokenHash = hash(rawToken);
         String rotatedRefresh = "new-refresh-token";
-        RefreshTokenRequest request = new RefreshTokenRequest();
-        request.setRefreshToken(rawToken);
-
-        User user = new User();
-        user.setId(100L);
-        user.setUsername("john");
-
-        RefreshToken stored = new RefreshToken();
-        stored.setUser(user);
-        stored.setRevoked(false);
-        stored.setExpiresAt(LocalDateTime.now().plusMinutes(10));
-        stored.setTokenHash(hash(rawToken));
-
-        UserDetails userDetails = withUsername("john")
-                .password("encoded")
-                .authorities("USER")
-                .build();
+        String rotatedRefreshHash = hash(rotatedRefresh);
+        RefreshTokenRequest request = refreshTokenRequest(rawToken);
+        User user = user(100L, "john");
+        RefreshToken stored = refreshToken(user, false, FIXED_NOW.plusMinutes(10), tokenHash);
+        UserDetails userDetails = userDetails("john");
 
         when(jwtUtils.validateRefreshToken(rawToken)).thenReturn(true);
-        when(refreshTokenRepository.findByTokenHash(hash(rawToken))).thenReturn(Optional.of(stored));
+        when(refreshTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(stored));
         when(jwtUtils.getUsernameFromRefreshToken(rawToken)).thenReturn("john");
         when(userDetailsService.loadUserByUsername("john")).thenReturn(userDetails);
         when(jwtUtils.generateAccessToken(userDetails)).thenReturn("new-access-token");
         when(jwtUtils.generateRefreshToken(userDetails)).thenReturn(rotatedRefresh);
-        when(jwtUtils.getRefreshTokenExpiration(rotatedRefresh))
-                .thenReturn(Date.from(Instant.parse("2026-03-10T10:15:30Z")));
-        when(jwtUtils.getAccessTokenExpirationMs()).thenReturn(900000L);
-        when(jwtUtils.getRefreshTokenExpirationMs()).thenReturn(604800000L);
+        when(jwtUtils.getRefreshTokenExpiration(rotatedRefresh)).thenReturn(Date.from(FIXED_EXPIRES_AT));
+        when(jwtUtils.getAccessTokenExpirationMs()).thenReturn(ACCESS_TOKEN_EXPIRATION_MS);
+        when(jwtUtils.getRefreshTokenExpirationMs()).thenReturn(REFRESH_TOKEN_EXPIRATION_MS);
 
         AuthResponse response = authService.refreshToken(request);
 
-        assertEquals("new-access-token", response.getAccessToken());
-        assertEquals(rotatedRefresh, response.getRefreshToken());
+        assertAll(
+                () -> assertEquals("new-access-token", response.getAccessToken()),
+                () -> assertEquals(rotatedRefresh, response.getRefreshToken())
+        );
 
         ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokenRepository, times(2)).save(captor.capture());
         List<RefreshToken> savedTokens = captor.getAllValues();
 
-        RefreshToken revokedToken = savedTokens.getFirst();
-        assertTrue(revokedToken.isRevoked());
-        assertEquals(hash(rotatedRefresh), revokedToken.getReplacedByTokenHash());
-
+        RefreshToken revokedToken = savedTokens.get(0);
         RefreshToken newToken = savedTokens.get(1);
-        assertFalse(newToken.isRevoked());
-        assertEquals(hash(rotatedRefresh), newToken.getTokenHash());
-        assertEquals(user, newToken.getUser());
+
+        assertAll(
+                () -> assertTrue(revokedToken.isRevoked()),
+                () -> assertEquals(rotatedRefreshHash, revokedToken.getReplacedByTokenHash()),
+                () -> assertFalse(newToken.isRevoked()),
+                () -> assertEquals(rotatedRefreshHash, newToken.getTokenHash()),
+                () -> assertEquals(user, newToken.getUser())
+        );
+    }
+
+    private LoginRequest loginRequest(String username, String password) {
+        LoginRequest request = new LoginRequest();
+        request.setUsername(username);
+        request.setPassword(password);
+        return request;
+    }
+
+    private RefreshTokenRequest refreshTokenRequest(String refreshToken) {
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken(refreshToken);
+        return request;
+    }
+
+    private User user(Long id, String username) {
+        User user = new User();
+        user.setId(id);
+        user.setUsername(username);
+        return user;
+    }
+
+    private UserDetails userDetails(String username) {
+        return withUsername(username)
+                .password("encoded")
+                .authorities("USER")
+                .build();
+    }
+
+    private RefreshToken refreshToken(User user, boolean revoked, LocalDateTime expiresAt, String tokenHash) {
+        RefreshToken token = new RefreshToken();
+        token.setUser(user);
+        token.setRevoked(revoked);
+        token.setExpiresAt(expiresAt);
+        token.setTokenHash(tokenHash);
+        return token;
     }
 
     private String hash(String token) throws Exception {
