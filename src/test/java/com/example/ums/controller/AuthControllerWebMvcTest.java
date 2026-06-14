@@ -62,7 +62,6 @@ class AuthControllerWebMvcTest {
     @BeforeEach
     void setUp() {
         when(userService.registerUser(any())).thenReturn(buildUserResponse());
-        when(authService.login(any())).thenReturn(buildAuthResponse());
         doNothing().when(authService).logout(any());
     }
 
@@ -75,6 +74,8 @@ class AuthControllerWebMvcTest {
 
     @Test
     void register_returnsCreatedUser() throws Exception {
+        when(authService.login(any())).thenReturn(buildAuthResponse());
+
         mockMvc.perform(post(REGISTER_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(registerRequestJson()))
@@ -88,6 +89,8 @@ class AuthControllerWebMvcTest {
 
     @Test
     void login_returnsTokenPayload() throws Exception {
+        when(authService.login(any())).thenReturn(buildAuthResponse());
+
         mockMvc.perform(post(LOGIN_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginRequestJson(VALID_PASSWORD)))
