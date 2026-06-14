@@ -74,9 +74,9 @@ class UserServiceTest {
     @Test
     void registerUser_success() {
         // Arrange
-        Role userRole = createRole(ROLE_USER);
+        Role userRole = createRole();
         User mappedUser = createUser();
-        UserResponse expectedResponse = createUserResponse(TEST_USER_ID, Set.of(ROLE_USER), true);
+        UserResponse expectedResponse = createUserResponse(TEST_USER_ID, Set.of(ROLE_USER));
 
         when(userRepository.existsByUsernameIgnoreCase(TEST_USERNAME)).thenReturn(false);
         when(userRepository.existsByEmail(TEST_EMAIL)).thenReturn(false);
@@ -91,7 +91,7 @@ class UserServiceTest {
         // Assert
         assertSame(expectedResponse, response);
         verify(passwordEncoder).encode(TEST_PASSWORD);
-        verify(userRepository).save(argThat(user -> hasExpectedUserFieldsAndSingleRole(user, TEST_ENCODED_PASSWORD, ROLE_USER)));
+        verify(userRepository).save(argThat(this::hasExpectedUserFieldsAndSingleRole));
     }
 
     @Test
@@ -152,8 +152,8 @@ class UserServiceTest {
         UpdateUserRequest request = UpdateUserRequest.builder()
                 .password(TEST_NEW_PASSWORD)
                 .build();
-        UserResponse beforeUpdate = createUserResponse(null, Set.of(ROLE_USER), true);
-        UserResponse afterUpdate = createUserResponse(null, Set.of(ROLE_USER), true);
+        UserResponse beforeUpdate = createUserResponse(null, Set.of(ROLE_USER));
+        UserResponse afterUpdate = createUserResponse(null, Set.of(ROLE_USER));
 
         when(userRepository.findByUsernameWithRoles(TEST_USERNAME)).thenReturn(Optional.of(existingUser));
         when(passwordEncoder.encode(TEST_NEW_PASSWORD)).thenReturn(TEST_ENCODED_NEW_PASSWORD);
@@ -203,7 +203,7 @@ class UserServiceTest {
     void registerByAdmin_invalidRole() {
         // Arrange
         AdminRegistrationRequest request = createAdminRegistrationRequest(Set.of(ROLE_USER, ROLE_MISSING));
-        Role userRole = createRole(ROLE_USER);
+        Role userRole = createRole();
 
         when(userRepository.existsByUsernameIgnoreCase(TEST_USERNAME)).thenReturn(false);
         when(userRepository.existsByEmail(TEST_EMAIL)).thenReturn(false);
@@ -224,9 +224,9 @@ class UserServiceTest {
     void registerByAdmin_defaultRole() {
         // Arrange
         AdminRegistrationRequest request = createAdminRegistrationRequest(null);
-        Role defaultRole = createRole(ROLE_USER);
+        Role defaultRole = createRole();
         User mappedUser = createUser();
-        UserResponse expected = createUserResponse(null, Set.of(ROLE_USER), true);
+        UserResponse expected = createUserResponse(null, Set.of(ROLE_USER));
 
         when(userRepository.existsByUsernameIgnoreCase(TEST_USERNAME)).thenReturn(false);
         when(userRepository.existsByEmail(TEST_EMAIL)).thenReturn(false);
@@ -240,7 +240,7 @@ class UserServiceTest {
 
         // Assert
         assertEquals(expected, actual);
-        verify(userRepository).save(argThat(user -> hasExpectedUserFieldsAndSingleRole(user, TEST_ENCODED_PASSWORD, ROLE_USER)));
+        verify(userRepository).save(argThat(this::hasExpectedUserFieldsAndSingleRole));
     }
 
     private RegistrationRequest createRegistrationRequest() {
@@ -268,28 +268,28 @@ class UserServiceTest {
         return user;
     }
 
-    private Role createRole(String roleName) {
+    private Role createRole() {
         Role role = new Role();
-        role.setName(roleName);
+        role.setName(UserServiceTest.ROLE_USER);
         return role;
     }
 
-    private UserResponse createUserResponse(Long id, Set<String> roles, boolean enabled) {
+    private UserResponse createUserResponse(Long id, Set<String> roles) {
         return UserResponse.builder()
                 .id(id)
                 .username(TEST_USERNAME)
                 .email(TEST_EMAIL)
                 .roles(roles)
-                .enabled(enabled)
+                .enabled(true)
                 .build();
     }
 
-    private boolean hasExpectedUserFieldsAndSingleRole(User user, String encodedPassword, String roleName) {
+    private boolean hasExpectedUserFieldsAndSingleRole(User user) {
         return TEST_USERNAME.equals(user.getUsername())
                 && TEST_EMAIL.equals(user.getEmail())
-                && encodedPassword.equals(user.getPassword())
+                && UserServiceTest.TEST_ENCODED_PASSWORD.equals(user.getPassword())
                 && user.getRoles() != null
                 && user.getRoles().size() == 1
-                && user.getRoles().stream().anyMatch(role -> roleName.equals(role.getName()));
+                && user.getRoles().stream().anyMatch(role -> UserServiceTest.ROLE_USER.equals(role.getRole().getName()));
     }
 }

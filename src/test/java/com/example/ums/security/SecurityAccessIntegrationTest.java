@@ -79,7 +79,7 @@ class SecurityAccessIntegrationTest {
     @Test
     @WithMockUser(username = "manager", roles = "MANAGER")
     void managerEndpoint_returnsUsersForManagerRole() throws Exception {
-        Page<UserResponse> users = new PageImpl<>(List.of(sampleUserResponse(10L, "alpha", "alpha@example.com", "USER")));
+        Page<UserResponse> users = new PageImpl<>(List.of(sampleUserResponse(10L, "alpha", "alpha@example.com")));
         when(userService.getAll(any(Pageable.class))).thenReturn(users);
 
         mockMvc.perform(get(MANAGER_USERS))
@@ -128,7 +128,7 @@ class SecurityAccessIntegrationTest {
     @Test
     @WithMockUser(username = "Alice", roles = "USER")
     void userProfile_returnsProfileForUserRole() throws Exception {
-        UserResponse response = sampleUserResponse(1L, "Alice", "alice@example.com", "USER");
+        UserResponse response = sampleUserResponse(1L, "Alice", "alice@example.com");
         when(userService.getProfile("Alice")).thenReturn(response);
 
         mockMvc.perform(get(USER_PROFILE).accept(MediaType.APPLICATION_JSON))
@@ -142,12 +142,12 @@ class SecurityAccessIntegrationTest {
         verify(userService).getProfile("Alice");
     }
 
-    private static UserResponse sampleUserResponse(Long id, String username, String email, String role) {
+    private static UserResponse sampleUserResponse(Long id, String username, String email) {
         return UserResponse.builder()
                 .id(id)
                 .username(username)
                 .email(email)
-                .roles(Set.of(role))
+                .roles(Set.of("USER"))
                 .enabled(true)
                 .build();
     }

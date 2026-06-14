@@ -25,7 +25,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.HexFormat;
 import java.util.List;
@@ -42,8 +41,8 @@ class AuthServiceTest {
 
     private static final long ACCESS_TOKEN_EXPIRATION_MS = 900000L;
     private static final long REFRESH_TOKEN_EXPIRATION_MS = 604800000L;
-    private static final Instant FIXED_EXPIRES_AT = Instant.parse("2026-03-10T10:15:30Z");
-    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 3, 10, 10, 15, 30);
+    private static final Instant FIXED_EXPIRES_AT = Instant.parse("2026-12-10T10:15:30Z");
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 12, 10, 10, 15, 30);
 
     @Mock
     private AuthenticationManager authenticationManager;
@@ -65,11 +64,11 @@ class AuthServiceTest {
 
     @Test
     void login_shouldReturnTokensAndPersistRefreshToken() {
-        LoginRequest request = loginRequest("john", "Password@123");
-        UserDetails userDetails = userDetails("john");
+        LoginRequest request = loginRequest();
+        UserDetails userDetails = userDetails();
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 userDetails, null, userDetails.getAuthorities());
-        User user = user(10L, "john");
+        User user = user(10L);
 
         when(authenticationManager.authenticate(any())).thenReturn(authentication);
         when(userRepository.findByUsernameIgnoreCase("john")).thenReturn(Optional.of(user));
@@ -146,7 +145,7 @@ class AuthServiceTest {
         String rawToken = "raw-token";
         String tokenHash = hash(rawToken);
         RefreshTokenRequest request = refreshTokenRequest(rawToken);
-        User user = user(99L, "john");
+        User user = user(99L);
         RefreshToken stored = refreshToken(user, true, FIXED_NOW.plusMinutes(10), tokenHash);
 
         when(jwtUtils.validateRefreshToken(rawToken)).thenReturn(true);
@@ -164,8 +163,8 @@ class AuthServiceTest {
         String rawToken = "raw-token";
         String tokenHash = hash(rawToken);
         RefreshTokenRequest request = refreshTokenRequest(rawToken);
-        User user = user(99L, "john");
-        RefreshToken stored = refreshToken(user, false, FIXED_NOW.minusMinutes(1), tokenHash);
+        User user = user(99L);
+        RefreshToken stored = refreshToken(user, false, LocalDateTime.now().minusMinutes(1), tokenHash);
 
         when(jwtUtils.validateRefreshToken(rawToken)).thenReturn(true);
         when(refreshTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(stored));
@@ -186,8 +185,8 @@ class AuthServiceTest {
         String rawToken = "raw-token";
         String tokenHash = hash(rawToken);
         RefreshTokenRequest request = refreshTokenRequest(rawToken);
-        User user = user(99L, "john");
-        RefreshToken stored = refreshToken(user, false, FIXED_NOW.plusMinutes(10), tokenHash);
+        User user = user(99L);
+        RefreshToken stored = refreshToken(user, false, LocalDateTime.now().plusMinutes(10), tokenHash);
 
         when(jwtUtils.validateRefreshToken(rawToken)).thenReturn(true);
         when(refreshTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(stored));
@@ -206,9 +205,9 @@ class AuthServiceTest {
         String rotatedRefresh = "new-refresh-token";
         String rotatedRefreshHash = hash(rotatedRefresh);
         RefreshTokenRequest request = refreshTokenRequest(rawToken);
-        User user = user(100L, "john");
-        RefreshToken stored = refreshToken(user, false, FIXED_NOW.plusMinutes(10), tokenHash);
-        UserDetails userDetails = userDetails("john");
+        User user = user(100L);
+        RefreshToken stored = refreshToken(user, false, LocalDateTime.now().plusMinutes(10), tokenHash);
+        UserDetails userDetails = userDetails();
 
         when(jwtUtils.validateRefreshToken(rawToken)).thenReturn(true);
         when(refreshTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(stored));
@@ -243,10 +242,10 @@ class AuthServiceTest {
         );
     }
 
-    private LoginRequest loginRequest(String username, String password) {
+    private LoginRequest loginRequest() {
         LoginRequest request = new LoginRequest();
-        request.setUsername(username);
-        request.setPassword(password);
+        request.setUsername("john");
+        request.setPassword("Password@123");
         return request;
     }
 
@@ -256,15 +255,15 @@ class AuthServiceTest {
         return request;
     }
 
-    private User user(Long id, String username) {
+    private User user(Long id) {
         User user = new User();
         user.setId(id);
-        user.setUsername(username);
+        user.setUsername("john");
         return user;
     }
 
-    private UserDetails userDetails(String username) {
-        return withUsername(username)
+    private UserDetails userDetails() {
+        return withUsername("john")
                 .password("encoded")
                 .authorities("USER")
                 .build();
