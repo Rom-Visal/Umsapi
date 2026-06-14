@@ -6,6 +6,7 @@ import com.example.ums.security.JwtUtils;
 import com.example.ums.service.AuthService;
 import com.example.ums.service.UserDetailsServiceImpl;
 import com.example.ums.service.UserService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -23,12 +24,25 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
 class AuthControllerWebMvcTest {
+
+    private static final String HOME_URL = "/auth/home";
+    private static final String REGISTER_URL = "/auth/register";
+    private static final String LOGIN_URL = "/auth/login";
+    private static final String LOGOUT_URL = "/auth/logout";
+
+    private static final String VALID_USERNAME = "john";
+    private static final String VALID_EMAIL = "john@example.com";
+    private static final String VALID_PASSWORD = "Password@123";
+    private static final String INVALID_PASSWORD = "wrong-pass";
+    private static final String REFRESH_TOKEN = "some-refresh-token";
 
     @Autowired
     private MockMvc mockMvc;
@@ -45,110 +59,133 @@ class AuthControllerWebMvcTest {
     @MockitoBean
     private UserDetailsServiceImpl userDetailsService;
 
+    @BeforeEach
+    void setUp() {
+        when(userService.registerUser(any())).thenReturn(buildUserResponse());
+        doNothing().when(authService).logout(any());
+    }
+
     @Test
     void home_returnsWelcomeMessage() throws Exception {
-        mockMvc.perform(get("/auth/home"))
+        mockMvc.perform(get(HOME_URL))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Welcome to Spring Boot REST APIs"));
     }
 
     @Test
-    void registerUser_returnsCreated() throws Exception {
-        UserResponse response = UserResponse.builder()
-                .id(1L)
-                .username("john")
-                .email("john@example.com")
-                .roles(Set.of("USER"))
-                .enabled(true)
-                .build();
+    void register_returnsCreatedUser() throws Exception {
+        when(authService.login(any())).thenReturn(buildAuthResponse());
 
-        when(userService.registerUser(any())).thenReturn(response);
-
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post(REGISTER_URL)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "username": "john",
-                                  "email": "john@example.com",
-                                  "password": "Password@123"
-                                }
-                                """))
+                        .content(registerRequestJson()))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.username").value("john"))
-                .andExpect(jsonPath("$.email").value("john@example.com"));
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.username").value(VALID_USERNAME))
+                .andExpect(jsonPath("$.email").value(VALID_EMAIL))
+                .andExpect(jsonPath("$.roles[0]").value("USER"))
+                .andExpect(jsonPath("$.enabled").value(true));
     }
 
     @Test
     void login_returnsTokenPayload() throws Exception {
-        AuthResponse response = AuthResponse.builder()
-                .accessToken("access-token")
-                .refreshToken("refresh-token")
-                .tokenType("Bearer")
-                .accessTokenExpiresIn(900000L)
-                .refreshTokenExpiresIn(604800000L)
-                .build();
+        when(authService.login(any())).thenReturn(buildAuthResponse());
 
-        when(authService.login(any())).thenReturn(response);
-
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post(LOGIN_URL)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "username": "john",
-                                  "password": "Password@123"
-                                }
-                                """))
+                        .content(loginRequestJson(VALID_PASSWORD)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("access-token"))
                 .andExpect(jsonPath("$.refreshToken").value("refresh-token"))
-                .andExpect(jsonPath("$.tokenType").value("Bearer"));
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.accessTokenExpiresIn").value(900000))
+                .andExpect(jsonPath("$.refreshTokenExpiresIn").value(604800000));
     }
 
     @Test
-    void register_invalidPayload_badRequest() throws Exception {
-        mockMvc.perform(post("/auth/register")
+    void register_invalidPayload_returnsBadRequest() throws Exception {
+        mockMvc.perform(post(REGISTER_URL)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "username": "",
-                                  "email": "bad-email",
-                                  "password": "short"
-                                }
-                                """))
+                        .content(invalidRegisterRequestJson()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Validation Error"));
     }
 
     @Test
     void logout_returnsNoContent() throws Exception {
-        doNothing().when(authService).logout(any());
-
-        mockMvc.perform(post("/auth/logout")
+        mockMvc.perform(post(LOGOUT_URL)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "some-refresh-token"
-                                }
-                                """))
+                        .content(logoutRequestJson()))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    void login_invalidCredentials_unauthorized() throws Exception {
+    void login_invalidCredentials_returnsUnauthorized() throws Exception {
         when(authService.login(any())).thenThrow(new BadCredentialsException("Bad credentials"));
 
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post(LOGIN_URL)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "username": "john",
-                                  "password": "wrong-pass"
-                                }
-                                """))
+                        .content(loginRequestJson(INVALID_PASSWORD)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("Unauthorized"))
-                .andExpect(jsonPath("$.message")
-                        .value("Authentication required. Please provide valid credentials."))
-                .andExpect(jsonPath("$.path").value("/auth/login"));
+                .andExpect(jsonPath("$.message").value("Authentication required. Please provide valid credentials."))
+                .andExpect(jsonPath("$.path").value(LOGIN_URL));
+    }
+
+    private static String registerRequestJson() {
+        return """
+                {
+                  "username": "%s",
+                  "email": "%s",
+                  "password": "%s"
+                }
+                """.formatted(VALID_USERNAME, VALID_EMAIL, VALID_PASSWORD);
+    }
+
+    private static String loginRequestJson(String password) {
+        return """
+                {
+                  "username": "%s",
+                  "password": "%s"
+                }
+                """.formatted(VALID_USERNAME, password);
+    }
+
+    private static String invalidRegisterRequestJson() {
+        return """
+                {
+                  "username": "",
+                  "email": "bad-email",
+                  "password": "short"
+                }
+                """;
+    }
+
+    private static String logoutRequestJson() {
+        return """
+                {
+                  "refreshToken": "%s"
+                }
+                """.formatted(REFRESH_TOKEN);
+    }
+
+    private static UserResponse buildUserResponse() {
+        return UserResponse.builder()
+                .id(1L)
+                .username(VALID_USERNAME)
+                .email(VALID_EMAIL)
+                .roles(Set.of("USER"))
+                .enabled(true)
+                .build();
+    }
+
+    private static AuthResponse buildAuthResponse() {
+        return AuthResponse.builder()
+                .accessToken("access-token")
+                .refreshToken("refresh-token")
+                .tokenType("Bearer")
+                .accessTokenExpiresIn(900000L)
+                .refreshTokenExpiresIn(604800000L)
+                .build();
     }
 }
