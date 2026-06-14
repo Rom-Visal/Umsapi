@@ -41,6 +41,8 @@ class AuthControllerWebMvcTest {
     private static final String VALID_USERNAME = "john";
     private static final String VALID_EMAIL = "john@example.com";
     private static final String VALID_PASSWORD = "Password@123";
+    private static final String INVALID_PASSWORD = "wrong-pass";
+    private static final String REFRESH_TOKEN = "some-refresh-token";
 
     @Autowired
     private MockMvc mockMvc;
@@ -75,13 +77,7 @@ class AuthControllerWebMvcTest {
     void register_returnsCreatedUser() throws Exception {
         mockMvc.perform(post(REGISTER_URL)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "username": "%s",
-                                  "email": "%s",
-                                  "password": "%s"
-                                }
-                                """.formatted(VALID_USERNAME, VALID_EMAIL, VALID_PASSWORD)))
+                        .content(registerRequestJson()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.username").value(VALID_USERNAME))
@@ -94,12 +90,7 @@ class AuthControllerWebMvcTest {
     void login_returnsTokenPayload() throws Exception {
         mockMvc.perform(post(LOGIN_URL)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "username": "%s",
-                                  "password": "%s"
-                                }
-                                """.formatted(VALID_USERNAME, VALID_PASSWORD)))
+                        .content(loginRequestJson(VALID_PASSWORD)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("access-token"))
                 .andExpect(jsonPath("$.refreshToken").value("refresh-token"))
@@ -112,13 +103,7 @@ class AuthControllerWebMvcTest {
     void register_invalidPayload_returnsBadRequest() throws Exception {
         mockMvc.perform(post(REGISTER_URL)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "username": "",
-                                  "email": "bad-email",
-                                  "password": "short"
-                                }
-                                """))
+                        .content(invalidRegisterRequestJson()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Validation Error"));
     }
@@ -127,11 +112,7 @@ class AuthControllerWebMvcTest {
     void logout_returnsNoContent() throws Exception {
         mockMvc.perform(post(LOGOUT_URL)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "some-refresh-token"
-                                }
-                                """))
+                        .content(logoutRequestJson()))
                 .andExpect(status().isNoContent());
     }
 
@@ -141,16 +122,48 @@ class AuthControllerWebMvcTest {
 
         mockMvc.perform(post(LOGIN_URL)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "username": "%s",
-                                  "password": "wrong-pass"
-                                }
-                                """.formatted(VALID_USERNAME)))
+                        .content(loginRequestJson(INVALID_PASSWORD)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("Unauthorized"))
                 .andExpect(jsonPath("$.message").value("Authentication required. Please provide valid credentials."))
                 .andExpect(jsonPath("$.path").value(LOGIN_URL));
+    }
+
+    private static String registerRequestJson() {
+        return """
+                {
+                  "username": "%s",
+                  "email": "%s",
+                  "password": "%s"
+                }
+                """.formatted(VALID_USERNAME, VALID_EMAIL, VALID_PASSWORD);
+    }
+
+    private static String loginRequestJson(String password) {
+        return """
+                {
+                  "username": "%s",
+                  "password": "%s"
+                }
+                """.formatted(VALID_USERNAME, password);
+    }
+
+    private static String invalidRegisterRequestJson() {
+        return """
+                {
+                  "username": "",
+                  "email": "bad-email",
+                  "password": "short"
+                }
+                """;
+    }
+
+    private static String logoutRequestJson() {
+        return """
+                {
+                  "refreshToken": "%s"
+                }
+                """.formatted(REFRESH_TOKEN);
     }
 
     private static UserResponse buildUserResponse() {
